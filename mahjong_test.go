@@ -116,3 +116,19 @@ func TestCheckHuForLZ(t *testing.T) {
 		aiCards[j1].num++
 	}
 }
+
+func TestCheckTing(t *testing.T) {
+	aiCards := []aiCard{
+		{COLOR_WAN*MAHJONG_MASK + MAHJONG_1, 3},
+		{COLOR_WAN*MAHJONG_MASK + MAHJONG_2, 1},
+		{COLOR_WAN*MAHJONG_MASK + MAHJONG_3, 1},
+		{COLOR_WAN*MAHJONG_MASK + MAHJONG_4, 1},
+		{COLOR_WAN*MAHJONG_MASK + MAHJONG_5, 1},
+		{COLOR_WAN*MAHJONG_MASK + MAHJONG_6, 1},
+		{COLOR_WAN*MAHJONG_MASK + MAHJONG_7, 1},
+		{COLOR_WAN*MAHJONG_MASK + MAHJONG_8, 1},
+		{COLOR_WAN*MAHJONG_MASK + MAHJONG_9, 3},
+	}
+	fmt.Println(CheckTing(aiCards))
+
+}

@@ -1,5 +1,10 @@
 package mahjong
 
+import (
+	"fmt"
+	"sort"
+)
+
 const MAHJONG_MASK int32 = 100
 
 const (
@@ -189,6 +194,7 @@ func CheckTing(aiCards []aiCard) []int32 {
 	copy(aiCardsBk, aiCards)
 	for i := 0; i < lenCards; i++ {
 		subTing := make([]int32, 0, 5) //每一轮听牌个数最多三张
+		group := make(map[int32]int32)
 		if aiCards[i].num >= 2 {
 			if aiCards[i].num > 2 && aiCards[i].card%MAHJONG_MASK >= MAHJONG_DONG {
 				continue
@@ -208,48 +214,117 @@ func CheckTing(aiCards []aiCard) []int32 {
 				j++
 			}
 			if j >= lenCards {
-				tingInfo = append(tingInfo, subTing...)
 				break
 			}
-
+			fmt.Println(i, j)
 			if aiCards[j].card%MAHJONG_MASK >= MAHJONG_DONG && (aiCards[j].num == 1 || aiCards[j].num == 4) {
+				subTing = subTing[:0]
 				break
 			} else if aiCards[j].num >= 3 {
 				aiCards[j].num -= 3
+				group[aiCards[j].card] = 0
 			} else if j <= lenCards - 3 && 
 					  aiCards[j].num >= 1 && aiCards[j+1].num >= 1 && aiCards[j+2].num >= 1 &&
 					  aiCards[j].card == aiCards[j+1].card-1 && aiCards[j+1].card+1 == aiCards[j+2].card {
 				aiCards[j].num--
 				aiCards[j+1].num--
 				aiCards[j+2].num--
+				if _, ok := group[aiCards[j].card]; !ok {
+					group[aiCards[j].card] = 1
+				} else {
+					group[aiCards[j].card]++
+				}
 			} else if aiCards[j].num == 2 {
 				aiCards[j].num -= 2
 				if len(subTing) > 0 {
+					subTing = subTing[:0]
 					break
 				} else {
 					subTing = append(subTing, aiCards[j].card)
 				}				
 			} else {
-				if j >= lenCards-1 {
+				if len(subTing) > 0 || j > lenCards-2 || aiCards[j+1].card-aiCards[j].card > 2 ||
+				   (aiCards[j+1].num == 0 && (j > lenCards-3 || aiCards[j+2].num == 0 || aiCards[j+2].card-aiCards[j].card > 2)) {
+				   	subTing = subTing[:0]
 					break
 				} 
-				if aiCards[j+1].num > 0 && aiCards[j].card == aiCards[j+1].card-1 {
-					if len(subTing) > 0 {
-						subTing = subTing[:0]
-						break
-					} else {
+				if aiCards[j+1].num > 0 {
+					if aiCards[j].card == aiCards[j+1].card-1 {
 						if aiCards[j].card%MAHJONG_MASK == MAHJONG_1 {
 							subTing = append(subTing, aiCards[j+1].card+1)
 						} else if aiCards[j+1].card%MAHJONG_MASK == MAHJONG_9 {
 							subTing = append(subTing, aiCards[j].card-1)
 						} else {
 							subTing = append(subTing, aiCards[j].card-1, aiCards[j+1].card+1)
-						}
+						}	
+					} else {
+						subTing = append(subTing, aiCards[j].card+1)
 					}
-				} //todo
+					aiCards[j+1].num--
+				} else {
+					subTing = append(subTing, aiCards[j].card+1)
+					aiCards[j+2].num--
+				}
+				aiCards[j].num--
 			}
+		}
+		if len(subTing) > 0 {
+			if len(subTing) == 1 {
+				if subTing[0]%MAHJONG_MASK > MAHJONG_3 && subTing[0]%MAHJONG_MASK < MAHJONG_7 && group[subTing[0]-2] > 0 {
+					subTing = append(subTing, subTing[0]-3) //若胡4、5、6，检测是否胡14、25、36
+				} else if subTing[0]%MAHJONG_MASK >= MAHJONG_7 {
+					if group[subTing[0]-2] > 0 {
+						subTing = append(subTing, subTing[0]-3)	//若胡7、8、9，检测是否胡47、58、69
+					}
+					if group[subTing[0]-5] > 0 {
+						subTing = append(subTing, subTing[0]-6)	//继续检测是否胡147、258、369
+					}
+				}
+			} else {
+				if subTing[0]%MAHJONG_MASK > MAHJONG_3 && subTing[0]%MAHJONG_MASK < MAHJONG_7 && subTing[1] == subTing[0]+3 && group[subTing[0]-2] > 0 {
+					subTing = append(subTing, subTing[0]-3) //若胡47、58、69，检测是否胡147、、258、369
+				} 
+			}
+			tingInfo = append(tingInfo, subTing...)
 		}
 		copy(aiCards, aiCardsBk)
 	}
+	if len(tingInfo) > 0 {
+		sort.Slice(tingInfo, func(i,j int) bool {return tingInfo[i] < tingInfo[j]})
+	}
 	return tingInfo
+}
+
+func CheckTingForLZ(aiCards []int32, lzCard int32) []int32 {
+	tingInfo = make([]int32, 0, 34)
+	if getCardNum(aiCards)%3 != 1 {
+		return tingInfo
+	}
+
+	lzNum := int32(0)
+	lenCards := len(aiCards)
+	for i := 0; i < lenCards; i++ {
+		if aiCards[i].card == lzCard {
+			lzNum = aiCards[i].num
+			aiCards = append(aiCards[:i], aiCards[i+1:]...)
+			lenCards--
+			break
+		}
+	}
+	if lzNum <= 0 {
+		return CheckTing(aiCards)
+	}
+
+	aiCardsBk := make([]aiCard, lenCards)
+	copy(aiCardsBk, aiCards)
+	lzNumBk := lzNum
+
+	for i := 0; i < lenCards; i++ {
+		
+	}
+	
+	if len(tingInfo) > 0 {
+		sort.Slice(tingInfo, func(i,j int) bool {return tingInfo[i] < tingInfo[j]})
+	}
+	return tingInfo	
 }
