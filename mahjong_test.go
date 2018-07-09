@@ -130,5 +130,18 @@ func TestCheckTing(t *testing.T) {
 		{COLOR_WAN*MAHJONG_MASK + MAHJONG_9, 3},
 	}
 	fmt.Println(CheckTing(aiCards))
+}
 
+func TestCheckTingForLZ(t *testing.T) {
+	aiCards := []aiCard{
+		 {COLOR_WAN*MAHJONG_MASK + MAHJONG_1, 2},
+		 {COLOR_WAN*MAHJONG_MASK + MAHJONG_2, 1},
+		 {COLOR_WAN*MAHJONG_MASK + MAHJONG_3, 3},
+		 {COLOR_WAN*MAHJONG_MASK + MAHJONG_4, 1},
+		 {COLOR_WAN*MAHJONG_MASK + MAHJONG_5, 1},
+		 {COLOR_WAN*MAHJONG_MASK + MAHJONG_6, 1},		
+		 {COLOR_WAN*MAHJONG_MASK + MAHJONG_9, 1},
+		 {COLOR_TIAO*MAHJONG_MASK + MAHJONG_1, 3},
+	}
+	fmt.Println(CheckTingForLZ(aiCards, COLOR_TIAO*MAHJONG_MASK + MAHJONG_1))
 }

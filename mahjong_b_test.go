@@ -4,7 +4,7 @@ import (
 	"testing"
 )
 
-func Benchmark_CheckHu(b *testing.B) {
+func BenchmarkCheckHu(b *testing.B) {
 	aiCards := []aiCard{
 		{COLOR_WAN*MAHJONG_MASK + MAHJONG_1, 3},
 		{COLOR_WAN*MAHJONG_MASK + MAHJONG_2, 1},
@@ -25,7 +25,7 @@ func Benchmark_CheckHu(b *testing.B) {
 	}
 }
 
-func Benchmark_CheckHuForLZ(b *testing.B) {
+func BenchmarkCheckHuForLZ(b *testing.B) {
 	aiCards := []aiCard{
 		{COLOR_WAN*MAHJONG_MASK + MAHJONG_1, 3},
 		{COLOR_WAN*MAHJONG_MASK + MAHJONG_2, 1},
@@ -118,4 +118,37 @@ func Benchmark_CheckHuForLZ(b *testing.B) {
 			aiCards[j1].num++
 		}
 	}
+}
+
+func BenchmarkCheckTing(b *testing.B) {
+	aiCards := []aiCard{
+		{COLOR_WAN*MAHJONG_MASK + MAHJONG_1, 3},
+		{COLOR_WAN*MAHJONG_MASK + MAHJONG_2, 1},
+		{COLOR_WAN*MAHJONG_MASK + MAHJONG_3, 1},
+		{COLOR_WAN*MAHJONG_MASK + MAHJONG_4, 1},
+		{COLOR_WAN*MAHJONG_MASK + MAHJONG_5, 1},
+		{COLOR_WAN*MAHJONG_MASK + MAHJONG_6, 1},
+		{COLOR_WAN*MAHJONG_MASK + MAHJONG_7, 1},
+		{COLOR_WAN*MAHJONG_MASK + MAHJONG_8, 1},
+		{COLOR_WAN*MAHJONG_MASK + MAHJONG_9, 3},
+	}
+	for i := 0; i < b.N; i++ {
+		CheckTing(aiCards)
+	}	
+}
+
+func BenchmarkCheckTingForLZ(b *testing.B) {
+	aiCards := []aiCard{
+		 {COLOR_WAN*MAHJONG_MASK + MAHJONG_1, 2},
+		 {COLOR_WAN*MAHJONG_MASK + MAHJONG_2, 1},
+		 {COLOR_WAN*MAHJONG_MASK + MAHJONG_3, 3},
+		 {COLOR_WAN*MAHJONG_MASK + MAHJONG_4, 1},
+		 {COLOR_WAN*MAHJONG_MASK + MAHJONG_5, 1},
+		 {COLOR_WAN*MAHJONG_MASK + MAHJONG_6, 1},		
+		 {COLOR_WAN*MAHJONG_MASK + MAHJONG_9, 1},
+		 {COLOR_TIAO*MAHJONG_MASK + MAHJONG_1, 3},
+	}
+	for i := 0; i < b.N; i++ {
+		CheckTingForLZ(aiCards, COLOR_TIAO*MAHJONG_MASK + MAHJONG_1)
+	}	
 }
