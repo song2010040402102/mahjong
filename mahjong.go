@@ -139,8 +139,7 @@ func CheckHuForLZ(cards []aiCard, lzCard int32) bool {
 				}
 				j++
 			}
-
-			//以下的取牌规则相对复杂，主要为了减少最外层的循环次数，当然也可以按照"刻>顺>对>连>单"的顺序来取牌
+			
 			if aiCards[j].num >= 3 {
 				aiCards[j].num -= 3
 			} else if aiCards[j].num == 2 {
@@ -153,7 +152,7 @@ func CheckHuForLZ(cards []aiCard, lzCard int32) bool {
 						lzNum--
 					}
 				} else {
-					if aiCards[j+1].num == 2 && (j > lenCards-3 || aiCards[j+2].num == 0 || aiCards[j+2].card-aiCards[j+1].card != 1) {
+					if j > lenCards-3 || aiCards[j+2].num == 0 || aiCards[j+2].card-aiCards[j+1].card != 1 {
 						if lzNum <= 0 {
 							break
 						} else {
