@@ -285,21 +285,11 @@ func CheckTing(cards []aiCard) []int32 {
 			}
 		}
 		if len(subTing) > 0 {
-			if len(subTing) == 1 {
-				if subTing[0]%MAHJONG_MASK > MAHJONG_3 && subTing[0]%MAHJONG_MASK < MAHJONG_7 && group[subTing[0]-2] > 0 {
-					subTing = append(subTing, subTing[0]-3) //若胡4、5、6，检测是否胡14、25、36
-				} else if subTing[0]%MAHJONG_MASK >= MAHJONG_7 {
-					if group[subTing[0]-2] > 0 {
-						subTing = append(subTing, subTing[0]-3)	//若胡7、8、9，检测是否胡47、58、69
-					}
-					if group[subTing[0]-5] > 0 {
-						subTing = append(subTing, subTing[0]-6)	//继续检测是否胡147、258、369
-					}
-				}
-			} else {
-				if subTing[0]%MAHJONG_MASK > MAHJONG_3 && subTing[0]%MAHJONG_MASK < MAHJONG_7 && subTing[1] == subTing[0]+3 && group[subTing[0]-2] > 0 {
-					subTing = append(subTing, subTing[0]-3) //若胡47、58、69，检测是否胡147、、258、369
-				} 
+			if subTing[0]%MAHJONG_MASK >= MAHJONG_4 && subTing[0]%MAHJONG_MASK <= MAHJONG_9 && group[subTing[0]-2] > 0 {
+				subTing = append(subTing, subTing[0]-3) //若胡4、5、6、7、8、9、47、58、69, 检测是否胡14、25、36、47、58、69、147、258、369
+			}  
+			if subTing[0]%MAHJONG_MASK >= MAHJONG_7 && subTing[0]%MAHJONG_MASK <= MAHJONG_9 && group[subTing[0]-5] > 0 {
+				subTing = append(subTing, subTing[0]-6)	//继续检测是否胡147、258、369
 			}
 			tingInfo = append(tingInfo, subTing...)
 		}
