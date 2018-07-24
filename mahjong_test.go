@@ -129,7 +129,7 @@ func TestCheckTing(t *testing.T) {
 		{COLOR_WAN*MAHJONG_MASK + MAHJONG_8, 1},
 		{COLOR_WAN*MAHJONG_MASK + MAHJONG_9, 3},
 	}
-	fmt.Println(CheckTing(aiCards))
+	fmt.Println("TestCheckTing: ", CheckTing(aiCards))
 }
 
 func TestCheckTingForLZ(t *testing.T) {
@@ -143,5 +143,5 @@ func TestCheckTingForLZ(t *testing.T) {
 		 {COLOR_WAN*MAHJONG_MASK + MAHJONG_9, 1},
 		 {COLOR_TIAO*MAHJONG_MASK + MAHJONG_1, 3},
 	}
-	fmt.Println(CheckTingForLZ(aiCards, COLOR_TIAO*MAHJONG_MASK + MAHJONG_1))
+	fmt.Println("TestCheckTingForLZ: ", CheckTingForLZ(aiCards, COLOR_TIAO*MAHJONG_MASK + MAHJONG_1))
 }

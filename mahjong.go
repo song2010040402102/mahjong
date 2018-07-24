@@ -142,27 +142,19 @@ func CheckHuForLZ(cards []aiCard, lzCard int32) bool {
 			
 			if aiCards[j].num >= 3 {
 				aiCards[j].num -= 3
+			} else if j <= lenCards - 3 && 
+					  aiCards[j].num >= 1 && aiCards[j+1].num >= 1 && aiCards[j+2].num >= 1 &&
+					  aiCards[j].card == aiCards[j+1].card-1 && aiCards[j+1].card+1 == aiCards[j+2].card &&
+					  (aiCards[j].num == 1 || aiCards[j+1].num == 2 || aiCards[j+2].num > 1) {
+				aiCards[j].num--
+				aiCards[j+1].num--
+				aiCards[j+2].num--
 			} else if aiCards[j].num == 2 {
-				if aiCards[j].card%MAHJONG_MASK >= MAHJONG_DONG || j > lenCards-2 || aiCards[j+1].num == 0 || aiCards[j+1].card-aiCards[j].card != 1 ||
-					(aiCards[j+1].num != 2 && (j > lenCards-3 || aiCards[j+2].num == 0 || aiCards[j+2].card-aiCards[j+1].card != 1 || aiCards[j+2].num == 1)) {
-					aiCards[j].num -= 2
-					if lzNum <= 0 {
-						break
-					} else {
-						lzNum--
-					}
+				aiCards[j].num -= 2
+				if lzNum <= 0 {
+					break
 				} else {
-					if j > lenCards-3 || aiCards[j+2].num == 0 || aiCards[j+2].card-aiCards[j+1].card != 1 {
-						if lzNum <= 0 {
-							break
-						} else {
-							lzNum--
-						}
-					} else {
-						aiCards[j+2].num--
-					}
-					aiCards[j].num--
-					aiCards[j+1].num--
+					lzNum--
 				}
 			} else {
 				if j > lenCards-2 || aiCards[j].card%MAHJONG_MASK >= MAHJONG_DONG ||
@@ -173,8 +165,7 @@ func CheckHuForLZ(cards []aiCard, lzCard int32) bool {
 					} else {
 						lzNum -= 2
 					}
-				} else if j > lenCards-3 || aiCards[j+1].num == 0 || aiCards[j+2].num == 0 ||
-					aiCards[j+2].card-aiCards[j+1].card > 1 || aiCards[j+1].card-aiCards[j].card > 1 {
+				} else {
 					if lzNum < 1 {
 						break
 					} else {
@@ -185,9 +176,6 @@ func CheckHuForLZ(cards []aiCard, lzCard int32) bool {
 							aiCards[j+1].num--
 						}
 					}
-				} else {
-					aiCards[j+1].num--
-					aiCards[j+2].num--
 				}
 				aiCards[j].num--
 			}
@@ -211,7 +199,7 @@ func CheckTing(cards []aiCard) []int32 {
 	copy(aiCardsBk, aiCards)
 	for i := 0; i < lenCards; i++ {
 		subTing := make([]int32, 0, 5) //每一轮听牌个数最多三张
-		group := make(map[int32]int32)
+		seq := make(map[int32]int32)
 		if aiCards[i].num >= 2 {
 			if aiCards[i].num > 2 && aiCards[i].card%MAHJONG_MASK >= MAHJONG_DONG {
 				continue
@@ -237,18 +225,18 @@ func CheckTing(cards []aiCard) []int32 {
 				subTing = subTing[:0]
 				break
 			} else if aiCards[j].num >= 3 {
-				aiCards[j].num -= 3
-				group[aiCards[j].card] = 0
+				aiCards[j].num -= 3				
 			} else if j <= lenCards - 3 && 
 					  aiCards[j].num >= 1 && aiCards[j+1].num >= 1 && aiCards[j+2].num >= 1 &&
-					  aiCards[j].card == aiCards[j+1].card-1 && aiCards[j+1].card+1 == aiCards[j+2].card {
+					  aiCards[j].card == aiCards[j+1].card-1 && aiCards[j+1].card+1 == aiCards[j+2].card && 
+					  (aiCards[j].num == 1 || aiCards[j+1].num == 2 || aiCards[j+2].num > 1) {
 				aiCards[j].num--
 				aiCards[j+1].num--
 				aiCards[j+2].num--
-				if _, ok := group[aiCards[j].card]; !ok {
-					group[aiCards[j].card] = 1
+				if _, ok := seq[aiCards[j].card]; !ok {
+					seq[aiCards[j].card] = 1
 				} else {
-					group[aiCards[j].card]++
+					seq[aiCards[j].card]++
 				}
 			} else if aiCards[j].num == 2 {
 				aiCards[j].num -= 2
@@ -285,10 +273,10 @@ func CheckTing(cards []aiCard) []int32 {
 			}
 		}
 		if len(subTing) > 0 {
-			if subTing[0]%MAHJONG_MASK >= MAHJONG_4 && subTing[0]%MAHJONG_MASK <= MAHJONG_9 && group[subTing[0]-2] > 0 {
+			if subTing[0]%MAHJONG_MASK >= MAHJONG_4 && subTing[0]%MAHJONG_MASK <= MAHJONG_9 && seq[subTing[0]-2] > 0 {
 				subTing = append(subTing, subTing[0]-3) //若胡4、5、6、7、8、9、47、58、69, 检测是否胡14、25、36、47、58、69、147、258、369
 			}  
-			if subTing[0]%MAHJONG_MASK >= MAHJONG_7 && subTing[0]%MAHJONG_MASK <= MAHJONG_9 && group[subTing[0]-5] > 0 {
+			if subTing[0]%MAHJONG_MASK >= MAHJONG_7 && subTing[0]%MAHJONG_MASK <= MAHJONG_9 && seq[subTing[0]-5] > 0 {
 				subTing = append(subTing, subTing[0]-6)	//继续检测是否胡147、258、369
 			}
 			tingInfo = append(tingInfo, subTing...)
@@ -328,13 +316,21 @@ func CheckTingForLZ(cards []aiCard, lzCard int32) []int32 {
 		return CheckTing(cards)
 	}
 
+	//检查是否听所有牌
+	huCards := make([]aiCard, len(cards)+1)
+	copy(huCards, cards)
+	if CheckHuForLZ(append(huCards, aiCard{MAHJONG_ANY, 1}), lzCard) == true {		
+		tingInfo = append(tingInfo, MAHJONG_ANY)
+		return tingInfo
+	}
+
 	aiCardsBk := make([]aiCard, lenCards)
 	copy(aiCardsBk, aiCards)
 	lzNumBk := lzNum	
 
 	for i := 0; i < lenCards; i++ {		
 		subTing := make([]int32, 0, 10) //每一轮最多听8张		
-		group := make(map[int32]int32)
+		seq := make(map[int32]int32)
 		if aiCards[i].num >= 2 {			
 			aiCards[i].num -= 2						
 		} else if aiCards[i].num == 1 {
@@ -355,18 +351,18 @@ func CheckTingForLZ(cards []aiCard, lzCard int32) []int32 {
 				break
 			}				
 			if aiCards[j].num >= 3 {
-				aiCards[j].num -= 3
-				group[aiCards[j].card] = 0
+				aiCards[j].num -= 3				
 			} else if j <= lenCards - 3 && 
 					  aiCards[j].num >= 1 && aiCards[j+1].num >= 1 && aiCards[j+2].num >= 1 &&
-					  aiCards[j].card == aiCards[j+1].card-1 && aiCards[j+1].card+1 == aiCards[j+2].card {
+					  aiCards[j].card == aiCards[j+1].card-1 && aiCards[j+1].card+1 == aiCards[j+2].card && 
+					  (aiCards[j].num == 1 || aiCards[j+1].num == 2 || aiCards[j+2].num > 1) {
 				aiCards[j].num--
 				aiCards[j+1].num--
 				aiCards[j+2].num--
-				if _, ok := group[aiCards[j].card]; !ok {
-					group[aiCards[j].card] = 1
+				if _, ok := seq[aiCards[j].card]; !ok {
+					seq[aiCards[j].card] = 1
 				} else {
-					group[aiCards[j].card]++
+					seq[aiCards[j].card]++
 				}
 			} else {				
 				if lzNum < 0 {
@@ -377,7 +373,7 @@ func CheckTingForLZ(cards []aiCard, lzCard int32) []int32 {
 					if lzNum >= 0 {
 						lzNum--						
 					} 
-					if group[aiCards[j].card-2] > 0 {
+					if seq[aiCards[j].card-2] > 0 {
 						subTing = append(subTing, aiCards[j].card-3) //检测是否胡前一张
 					}
 					subTing = append(subTing, aiCards[j].card)
@@ -391,15 +387,15 @@ func CheckTingForLZ(cards []aiCard, lzCard int32) []int32 {
 							if aiCards[j].card%MAHJONG_MASK == MAHJONG_1 {								
 								subTing = append(subTing, aiCards[j+1].card+1)
 							} else if aiCards[j+1].card%MAHJONG_MASK == MAHJONG_9 {
-								if group[aiCards[j].card-3] > 0 {
+								if seq[aiCards[j].card-3] > 0 {
 									subTing = append(subTing, aiCards[j].card-4)	//若胡7，检测是否胡47
 								}
-								if group[aiCards[j].card-6] > 0 {
+								if seq[aiCards[j].card-6] > 0 {
 									subTing = append(subTing, aiCards[j].card-7)	//继续检测是否胡147
 								}
 								subTing = append(subTing, aiCards[j].card-1)
 							} else {
-								if aiCards[j].card%MAHJONG_MASK > MAHJONG_4 && aiCards[j].card%MAHJONG_MASK < MAHJONG_8 && group[aiCards[j].card-3] > 0 {
+								if aiCards[j].card%MAHJONG_MASK > MAHJONG_4 && aiCards[j].card%MAHJONG_MASK < MAHJONG_8 && seq[aiCards[j].card-3] > 0 {
 									subTing = append(subTing, aiCards[j].card-4) //若胡47、58、69，检测是否胡147、、258、369
 								}								
 								subTing = append(subTing, aiCards[j].card-1, aiCards[j+1].card+1)
@@ -441,17 +437,10 @@ func CheckTingForLZ(cards []aiCard, lzCard int32) []int32 {
 		}
 		copy(aiCards, aiCardsBk)
 		lzNum = lzNumBk
-	} 
-
-	//检查是否听所有牌
-	huCards := make([]aiCard, len(cards)+1)
-	copy(huCards, cards)
-	if CheckHuForLZ(append(huCards, aiCard{MAHJONG_ANY, 1}), lzCard) == true {		
-		tingInfo = append(tingInfo, MAHJONG_ANY)
-		return tingInfo[len(tingInfo)-1:]
-	}
+	} 	
 
 	if len(tingInfo) > 0 {
+		//对结果进行排序除重
 		sort.Slice(tingInfo, func(i,j int) bool {return tingInfo[i] < tingInfo[j]})
 		tmpTing := make([]int32, 0, len(tingInfo))
 		tmpTing = append(tmpTing, tingInfo[0])
