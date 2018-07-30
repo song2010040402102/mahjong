@@ -49,14 +49,13 @@ func getCardNum(aiCards []AICard) int32 {
 func CheckHu(cards []AICard) bool {
 	if getCardNum(cards)%3 != 2 {
 		return false
-	}
-	lenCards := len(cards)
-	aiCards := make([]AICard, lenCards)
-	aiCardsBk := make([]AICard, lenCards)
+	}	
+	aiCards := make([]AICard, len(cards))
+	aiCardsBk := make([]AICard, len(aiCards))
 	copy(aiCards, cards)
 	sort.Slice(aiCards, func (i, j int) bool {return aiCards[i].Card < aiCards[j].Card})
 	copy(aiCardsBk, aiCards)
-	for i := 0; i < lenCards; i++ {
+	for i := 0; i < len(aiCards); i++ {
 		if aiCards[i].Num >= 2 {
 			if aiCards[i].Num > 2 && aiCards[i].Card%MAHJONG_MASK >= MAHJONG_DONG {
 				continue
@@ -64,7 +63,7 @@ func CheckHu(cards []AICard) bool {
 			aiCards[i].Num -= 2			
 			for j := 0;; {
 				for {
-					if j >= lenCards {						
+					if j >= len(aiCards) {						
 						return true
 					}
 					if aiCards[j].Num > 0 {
@@ -75,7 +74,7 @@ func CheckHu(cards []AICard) bool {
 				if aiCards[j].Num >= 3 {
 					aiCards[j].Num -= 3
 				} else {
-					if j > lenCards-3 || aiCards[j].Card%MAHJONG_MASK >= MAHJONG_DONG ||
+					if j > len(aiCards)-3 || aiCards[j].Card%MAHJONG_MASK >= MAHJONG_DONG ||
 						aiCards[j+1].Num == 0 || aiCards[j+2].Num == 0 ||
 						aiCards[j].Card != aiCards[j+1].Card-1 || aiCards[j+1].Card+1 != aiCards[j+2].Card {
 						break
@@ -95,20 +94,18 @@ func CheckHuForLZ(cards []AICard, lzCard int32) bool {
 	if getCardNum(cards)%3 != 2 {
 		return false
 	}
-	lzNum := int32(0)
-	lenCards := len(cards)
-	aiCards := make([]AICard, lenCards)
+	lzNum := int32(0)	
+	aiCards := make([]AICard, len(cards))
 	copy(aiCards, cards)
 	sort.Slice(aiCards, func (i, j int) bool {return aiCards[i].Card < aiCards[j].Card})
-	for i := 0; i < lenCards; i++ {
+	for i := 0; i < len(aiCards); i++ {
 		if aiCards[i].Card == lzCard {
 			lzNum = aiCards[i].Num
-			if i == lenCards - 1 {
+			if i == len(aiCards) - 1 {
 				aiCards = aiCards[:i]	
 			} else {
 				aiCards = append(aiCards[:i], aiCards[i+1:]...)
-			}			
-			lenCards--
+			}						
 			break
 		}
 	}
@@ -116,11 +113,11 @@ func CheckHuForLZ(cards []AICard, lzCard int32) bool {
 		return CheckHu(cards)
 	}
 
-	aiCardsBk := make([]AICard, lenCards)
+	aiCardsBk := make([]AICard, len(aiCards))
 	copy(aiCardsBk, aiCards)
 	lzNumBk := lzNum
 
-	for i := 0; i < lenCards; i++ {
+	for i := 0; i < len(aiCards); i++ {
 		if aiCards[i].Num >= 2 {
 			aiCards[i].Num -= 2
 		} else if aiCards[i].Num == 1 {
@@ -131,7 +128,7 @@ func CheckHuForLZ(cards []AICard, lzCard int32) bool {
 		}		
 		for j := 0;; {
 			for {
-				if j >= lenCards {					
+				if j >= len(aiCards) {					
 					return true
 				}
 				if aiCards[j].Num > 0 {
@@ -142,7 +139,7 @@ func CheckHuForLZ(cards []AICard, lzCard int32) bool {
 			
 			if aiCards[j].Num >= 3 {
 				aiCards[j].Num -= 3
-			} else if j <= lenCards - 3 && 
+			} else if j <= len(aiCards) - 3 && 
 					  aiCards[j].Num >= 1 && aiCards[j+1].Num >= 1 && aiCards[j+2].Num >= 1 &&
 					  aiCards[j].Card == aiCards[j+1].Card-1 && aiCards[j+1].Card+1 == aiCards[j+2].Card &&
 					  (aiCards[j].Num == 1 || aiCards[j+1].Num == 2 || aiCards[j+2].Num > 1) {
@@ -157,9 +154,9 @@ func CheckHuForLZ(cards []AICard, lzCard int32) bool {
 					lzNum--
 				}
 			} else {
-				if j > lenCards-2 || aiCards[j].Card%MAHJONG_MASK >= MAHJONG_DONG ||
+				if j > len(aiCards)-2 || aiCards[j].Card%MAHJONG_MASK >= MAHJONG_DONG ||
 					aiCards[j+1].Card-aiCards[j].Card > 2 ||
-					(aiCards[j+1].Num == 0 && (j > lenCards-3 || aiCards[j+2].Num == 0 || aiCards[j+2].Card-aiCards[j].Card > 2)) {
+					(aiCards[j+1].Num == 0 && (j > len(aiCards)-3 || aiCards[j+2].Num == 0 || aiCards[j+2].Card-aiCards[j].Card > 2)) {
 					if lzNum < 2 {
 						break
 					} else {
@@ -190,14 +187,13 @@ func CheckTing(cards []AICard) []int32 {
 	tingInfo := make([]int32, 0, 34)
 	if getCardNum(cards)%3 != 1 {
 		return tingInfo
-	}
-	lenCards := len(cards)
-	aiCards := make([]AICard, lenCards)
-	aiCardsBk := make([]AICard, lenCards)
+	}	
+	aiCards := make([]AICard, len(cards))
+	aiCardsBk := make([]AICard, len(aiCards))
 	copy(aiCards, cards)
 	sort.Slice(aiCards, func (i, j int) bool {return aiCards[i].Card < aiCards[j].Card})
 	copy(aiCardsBk, aiCards)
-	for i := 0; i < lenCards; i++ {
+	for i := 0; i < len(aiCards); i++ {
 		subTing := make([]int32, 0, 5) //每一轮听牌个数最多三张
 		seq := make(map[int32]int32)
 		if aiCards[i].Num >= 2 {
@@ -213,12 +209,12 @@ func CheckTing(cards []AICard) []int32 {
 		}
 		for j := 0;; {
 			for {
-				if j >= lenCards || aiCards[j].Num > 0{					
+				if j >= len(aiCards) || aiCards[j].Num > 0{					
 					break
 				}				
 				j++
 			}
-			if j >= lenCards {
+			if j >= len(aiCards) {
 				break
 			}			
 			if aiCards[j].Card%MAHJONG_MASK >= MAHJONG_DONG && (aiCards[j].Num == 1 || aiCards[j].Num == 4) {
@@ -226,7 +222,7 @@ func CheckTing(cards []AICard) []int32 {
 				break
 			} else if aiCards[j].Num >= 3 {
 				aiCards[j].Num -= 3				
-			} else if j <= lenCards - 3 && 
+			} else if j <= len(aiCards) - 3 && 
 					  aiCards[j].Num >= 1 && aiCards[j+1].Num >= 1 && aiCards[j+2].Num >= 1 &&
 					  aiCards[j].Card == aiCards[j+1].Card-1 && aiCards[j+1].Card+1 == aiCards[j+2].Card && 
 					  (aiCards[j].Num == 1 || aiCards[j+1].Num == 2 || aiCards[j+2].Num > 1) {
@@ -247,8 +243,8 @@ func CheckTing(cards []AICard) []int32 {
 					subTing = append(subTing, aiCards[j].Card)
 				}				
 			} else {
-				if len(subTing) > 0 || j > lenCards-2 || aiCards[j+1].Card-aiCards[j].Card > 2 ||
-				   (aiCards[j+1].Num == 0 && (j > lenCards-3 || aiCards[j+2].Num == 0 || aiCards[j+2].Card-aiCards[j].Card > 2)) {
+				if len(subTing) > 0 || j > len(aiCards)-2 || aiCards[j+1].Card-aiCards[j].Card > 2 ||
+				   (aiCards[j+1].Num == 0 && (j > len(aiCards)-3 || aiCards[j+2].Num == 0 || aiCards[j+2].Card-aiCards[j].Card > 2)) {
 				   	subTing = subTing[:0]
 					break
 				} 
@@ -295,20 +291,18 @@ func CheckTingForLZ(cards []AICard, lzCard int32) []int32 {
 		return tingInfo
 	}
 
-	lzNum := int32(0)
-	lenCards := len(cards)
-	aiCards := make([]AICard, lenCards)
+	lzNum := int32(0)	
+	aiCards := make([]AICard, len(cards))
 	copy(aiCards, cards)
 	sort.Slice(aiCards, func (i, j int) bool {return aiCards[i].Card < aiCards[j].Card})
-	for i := 0; i < lenCards; i++ {
+	for i := 0; i < len(aiCards); i++ {
 		if aiCards[i].Card == lzCard {
 			lzNum = aiCards[i].Num
-			if i == lenCards-1 {
+			if i == len(aiCards)-1 {
 				aiCards = aiCards[:i]
 			} else {
 				aiCards = append(aiCards[:i], aiCards[i+1:]...)
-			}			
-			lenCards--
+			}						
 			break
 		}
 	}
@@ -324,11 +318,11 @@ func CheckTingForLZ(cards []AICard, lzCard int32) []int32 {
 		return tingInfo
 	}
 
-	aiCardsBk := make([]AICard, lenCards)
+	aiCardsBk := make([]AICard, len(aiCards))
 	copy(aiCardsBk, aiCards)
 	lzNumBk := lzNum	
 
-	for i := 0; i < lenCards; i++ {		
+	for i := 0; i < len(aiCards); i++ {		
 		subTing := make([]int32, 0, 10) //每一轮最多听8张		
 		seq := make(map[int32]int32)
 		if aiCards[i].Num >= 2 {			
@@ -342,17 +336,17 @@ func CheckTingForLZ(cards []AICard, lzCard int32) []int32 {
 		}
 		for j := 0;; {
 			for {
-				if j >= lenCards || aiCards[j].Num > 0{					
+				if j >= len(aiCards) || aiCards[j].Num > 0{					
 					break
 				}				
 				j++
 			}			
-			if j >= lenCards {
+			if j >= len(aiCards) {
 				break
 			}				
 			if aiCards[j].Num >= 3 {
 				aiCards[j].Num -= 3				
-			} else if j <= lenCards - 3 && 
+			} else if j <= len(aiCards) - 3 && 
 					  aiCards[j].Num >= 1 && aiCards[j+1].Num >= 1 && aiCards[j+2].Num >= 1 &&
 					  aiCards[j].Card == aiCards[j+1].Card-1 && aiCards[j+1].Card+1 == aiCards[j+2].Card && 
 					  (aiCards[j].Num == 1 || aiCards[j+1].Num == 2 || aiCards[j+2].Num > 1) {
@@ -379,7 +373,7 @@ func CheckTingForLZ(cards []AICard, lzCard int32) []int32 {
 					subTing = append(subTing, aiCards[j].Card)
 					aiCards[j].Num -= 2					
 				} else {								
-					if j < lenCards-1 && aiCards[j+1].Num > 0 && aiCards[j+1].Card-aiCards[j].Card < 3 {						
+					if j < len(aiCards)-1 && aiCards[j+1].Num > 0 && aiCards[j+1].Card-aiCards[j].Card < 3 {						
 						if lzNum >= 0 {
 							lzNum--						
 						} 
@@ -404,7 +398,7 @@ func CheckTingForLZ(cards []AICard, lzCard int32) []int32 {
 							subTing = append(subTing, aiCards[j].Card+1)
 						}
 						aiCards[j+1].Num--
-					} else if j < lenCards - 2 && aiCards[j+1].Num == 0 && aiCards[j+2].Num != 0 && aiCards[j+2].Card-aiCards[j].Card < 3 {						
+					} else if j < len(aiCards) - 2 && aiCards[j+1].Num == 0 && aiCards[j+2].Num != 0 && aiCards[j+2].Card-aiCards[j].Card < 3 {						
 						if lzNum >= 0 {
 							lzNum--						
 						}
