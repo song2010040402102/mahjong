@@ -291,11 +291,11 @@ func CheckCommonTing(cards []AICard, all bool) []int32 {
 		if len(subTing) > 0 {
 			if subTing[0]%MAHJONG_MASK >= MAHJONG_4 && subTing[0]%MAHJONG_MASK <= MAHJONG_9 && seq[subTing[0]-2] > 0 {
 				subTing = append(subTing, subTing[0]-3) //若胡4、5、6、7、8、9、47、58、69, 检测是否胡14、25、36、47、58、69、147、258、369
-			}
-			if subTing[0]%MAHJONG_MASK >= MAHJONG_7 && subTing[0]%MAHJONG_MASK <= MAHJONG_9 && seq[subTing[0]-5] > 0 {
-				subTing = append(subTing, subTing[0]-6) //继续检测是否胡147、258、369
-			}
-			tingInfo = append(tingInfo, subTing...)
+				if subTing[0]%MAHJONG_MASK >= MAHJONG_7 && subTing[0]%MAHJONG_MASK <= MAHJONG_9 && seq[subTing[0]-5] > 0 {
+					subTing = append(subTing, subTing[0]-6) //继续检测是否胡147、258、369
+				}
+			}			
+			tingInfo = append(tingInfo, subTing...)			
 			if !all {
 				break
 			}
@@ -303,7 +303,9 @@ func CheckCommonTing(cards []AICard, all bool) []int32 {
 		copy(aiCards, aiCardsBk)
 	}
 	if len(tingInfo) > 0 {
+		//对结果进行排序除重
 		sort.Slice(tingInfo, func(i, j int) bool { return tingInfo[i] < tingInfo[j] })
+		tingInfo = util.UniqueSlice(tingInfo)
 	}
 	return tingInfo
 }
@@ -398,10 +400,10 @@ func CheckCommonTingForLZ(cards []AICard, lzNum int32, all bool) []int32 {
 							} else if aiCards[j+1].Card%MAHJONG_MASK == MAHJONG_9 {
 								if seq[aiCards[j].Card-3] > 0 {
 									subTing = append(subTing, aiCards[j].Card-4) //若胡7，检测是否胡47
-								}
-								if seq[aiCards[j].Card-6] > 0 {
-									subTing = append(subTing, aiCards[j].Card-7) //继续检测是否胡147
-								}
+									if seq[aiCards[j].Card-6] > 0 {
+										subTing = append(subTing, aiCards[j].Card-7) //继续检测是否胡147
+									}
+								}								
 								subTing = append(subTing, aiCards[j].Card-1)
 							} else {
 								if aiCards[j].Card%MAHJONG_MASK > MAHJONG_4 && aiCards[j].Card%MAHJONG_MASK < MAHJONG_8 && seq[aiCards[j].Card-3] > 0 {
