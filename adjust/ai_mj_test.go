@@ -9,8 +9,8 @@ import (
 
 func TestBatchGetCardForRobot(t *testing.T) {
 	rule := NewRuleMahjong(RULE_ZJ_MAHJONG_TAIZHOU_HY)
-	rule.SetLaiziCard(101)
-	ai := GetAIForMJ()
+	rule.SetLaiziCard([]int32{101})
+	ai := &AIMjBase{}
 	ai.SetRule(rule)
 	ai.SetLevel(ROBOT_LEVEL_MAJOR)
 	ai.SetAllCard(make(map[int32][]int32), make(map[int32][]*ChiCard), make(map[int32][]int32), []int32{})
@@ -32,8 +32,8 @@ func TestBatchGetCardForRobot(t *testing.T) {
 
 func TestGetChiForRobot(t *testing.T) {
 	rule := NewRuleMahjong(RULE_ZJ_MAHJONG_TAIZHOU_HY)
-	rule.SetLaiziCard(101)
-	ai := GetAIForMJ()
+	rule.SetLaiziCard([]int32{101})
+	ai := &AIMjBase{}
 	ai.SetRule(rule)
 	ai.SetLevel(ROBOT_LEVEL_MAJOR)
 	ai.SetAllCard(make(map[int32][]int32), make(map[int32][]*ChiCard), make(map[int32][]int32), []int32{})

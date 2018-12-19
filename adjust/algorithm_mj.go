@@ -294,8 +294,8 @@ func CheckCommonTing(cards []AICard, all bool) []int32 {
 				if subTing[0]%MAHJONG_MASK >= MAHJONG_7 && subTing[0]%MAHJONG_MASK <= MAHJONG_9 && seq[subTing[0]-5] > 0 {
 					subTing = append(subTing, subTing[0]-6) //继续检测是否胡147、258、369
 				}
-			}			
-			tingInfo = append(tingInfo, subTing...)			
+			}
+			tingInfo = append(tingInfo, subTing...)
 			if !all {
 				break
 			}
@@ -305,7 +305,7 @@ func CheckCommonTing(cards []AICard, all bool) []int32 {
 	if len(tingInfo) > 0 {
 		//对结果进行排序除重
 		sort.Slice(tingInfo, func(i, j int) bool { return tingInfo[i] < tingInfo[j] })
-		tingInfo = util.UniqueSlice(tingInfo)
+		tingInfo = util.UniqueSlice(tingInfo).([]int32)
 	}
 	return tingInfo
 }
@@ -373,13 +373,12 @@ func CheckCommonTingForLZ(cards []AICard, lzNum int32, all bool) []int32 {
 					subTing = subTing[:0]
 					break
 				}
+				preTing := int32(0) //双牌前向听牌标记
 				if aiCards[j].Num == 2 {
 					if lzNum >= 0 {
 						lzNum--
 					}
-					if seq[aiCards[j].Card-2] > 0 {
-						subTing = append(subTing, aiCards[j].Card-3) //检测是否胡前一张
-					}
+					preTing = aiCards[j].Card
 					subTing = append(subTing, aiCards[j].Card)
 					aiCards[j].Num -= 2
 				} else {
@@ -396,22 +395,17 @@ func CheckCommonTingForLZ(cards []AICard, lzNum int32, all bool) []int32 {
 						}
 						if aiCards[j+1].Card-aiCards[j].Card == 1 {
 							if aiCards[j].Card%MAHJONG_MASK == MAHJONG_1 {
+								preTing = aiCards[j+1].Card + 1
 								subTing = append(subTing, aiCards[j+1].Card+1)
 							} else if aiCards[j+1].Card%MAHJONG_MASK == MAHJONG_9 {
-								if seq[aiCards[j].Card-3] > 0 {
-									subTing = append(subTing, aiCards[j].Card-4) //若胡7，检测是否胡47
-									if seq[aiCards[j].Card-6] > 0 {
-										subTing = append(subTing, aiCards[j].Card-7) //继续检测是否胡147
-									}
-								}								
+								preTing = aiCards[j].Card - 1
 								subTing = append(subTing, aiCards[j].Card-1)
 							} else {
-								if aiCards[j].Card%MAHJONG_MASK > MAHJONG_4 && aiCards[j].Card%MAHJONG_MASK < MAHJONG_8 && seq[aiCards[j].Card-3] > 0 {
-									subTing = append(subTing, aiCards[j].Card-4) //若胡47、58、69，检测是否胡147、、258、369
-								}
+								preTing = aiCards[j].Card - 1
 								subTing = append(subTing, aiCards[j].Card-1, aiCards[j+1].Card+1)
 							}
 						} else {
+							preTing = aiCards[j].Card + 1
 							subTing = append(subTing, aiCards[j].Card+1)
 						}
 						aiCards[j+1].Num--
@@ -419,6 +413,7 @@ func CheckCommonTingForLZ(cards []AICard, lzNum int32, all bool) []int32 {
 						if lzNum >= 0 {
 							lzNum--
 						}
+						preTing = aiCards[j].Card + 1
 						subTing = append(subTing, aiCards[j].Card+1)
 						aiCards[j+2].Num--
 					} else {
@@ -427,19 +422,41 @@ func CheckCommonTingForLZ(cards []AICard, lzNum int32, all bool) []int32 {
 							break
 						}
 						lzNum -= 2
-						if aiCards[j].Card%MAHJONG_MASK == MAHJONG_1 {
+						c := aiCards[j].Card % MAHJONG_MASK
+						if c == MAHJONG_1 {
 							subTing = append(subTing, aiCards[j].Card, aiCards[j].Card+1, aiCards[j].Card+2)
-						} else if aiCards[j].Card%MAHJONG_MASK == MAHJONG_2 {
+						} else if c == MAHJONG_2 {
 							subTing = append(subTing, aiCards[j].Card-1, aiCards[j].Card, aiCards[j].Card+1, aiCards[j].Card+2)
-						} else if aiCards[j].Card%MAHJONG_MASK == MAHJONG_8 {
+						} else if c == MAHJONG_8 {
 							subTing = append(subTing, aiCards[j].Card-2, aiCards[j].Card-1, aiCards[j].Card, aiCards[j].Card+1)
-						} else if aiCards[j].Card%MAHJONG_MASK == MAHJONG_9 {
+						} else if c == MAHJONG_9 {
 							subTing = append(subTing, aiCards[j].Card-2, aiCards[j].Card-1, aiCards[j].Card)
 						} else {
 							subTing = append(subTing, aiCards[j].Card-2, aiCards[j].Card-1, aiCards[j].Card, aiCards[j].Card+1, aiCards[j].Card+2)
 						}
+						//补上前听牌
+						if c == MAHJONG_5 {
+							if seq[aiCards[j].Card-3] > 0 {
+								subTing = append(subTing, aiCards[j].Card-4)
+							}
+						} else if c >= MAHJONG_6 && c <= MAHJONG_9 {
+							if seq[aiCards[j].Card-3] > 0 {
+								subTing = append(subTing, aiCards[j].Card-4)
+								subTing = append(subTing, aiCards[j].Card-5)
+							} else if seq[aiCards[j].Card-4] > 0 {
+								subTing = append(subTing, aiCards[j].Card-5)
+							}
+						}
 					}
 					aiCards[j].Num--
+					if preTing > 0 {
+						if preTing%MAHJONG_MASK >= MAHJONG_4 && preTing%MAHJONG_MASK <= MAHJONG_9 && seq[preTing-2] > 0 {
+							subTing = append(subTing, preTing-3) //若胡4、5、6、7、8、9、47、58、69, 检测是否胡14、25、36、47、58、69、147、258、369
+							if preTing%MAHJONG_MASK >= MAHJONG_7 && preTing%MAHJONG_MASK <= MAHJONG_9 && seq[preTing-5] > 0 {
+								subTing = append(subTing, preTing-6) //继续检测是否胡147、258、369
+							}
+						}
+					}
 				}
 			}
 		}
@@ -456,7 +473,7 @@ func CheckCommonTingForLZ(cards []AICard, lzNum int32, all bool) []int32 {
 	if len(tingInfo) > 0 {
 		//对结果进行排序除重
 		sort.Slice(tingInfo, func(i, j int) bool { return tingInfo[i] < tingInfo[j] })
-		tingInfo = util.UniqueSlice(tingInfo)
+		tingInfo = util.UniqueSlice(tingInfo).([]int32)
 	}
 	return tingInfo
 }
@@ -785,6 +802,7 @@ func CheckHunYiSe(chiCard []*ChiCard, cards []AICard) bool {
 	return true
 }
 
+//检查对对胡，仅适用无得
 func CheckDuiDuiHu(chiCard []*ChiCard, cards []AICard) bool {
 	for _, v := range chiCard {
 		if v.CardType != MJ_CHI_GANG &&
@@ -809,7 +827,7 @@ func CheckDuiDuiHu(chiCard []*ChiCard, cards []AICard) bool {
 	return true
 }
 
-//用于四川麻将带19，仅用于MJ_HU_TYPE_COMMON
+//用于四川麻将带19（每组组牌均带19），仅用于MJ_HU_TYPE_COMMON
 func CheckDai19(chiCard []*ChiCard, cards []AICard) bool {
 	for _, v := range chiCard {
 		if v.CardType == MJ_CHI_GANG ||
@@ -828,59 +846,25 @@ func CheckDai19(chiCard []*ChiCard, cards []AICard) bool {
 		}
 	}
 
-	aiCards := make([]AICard, len(cards))
-	aiCardsBk := make([]AICard, len(aiCards))
-	copy(aiCards, cards)
-	sort.Slice(aiCards, func(i, j int) bool { return aiCards[i].Card < aiCards[j].Card })
-	copy(aiCardsBk, aiCards)
-	for i := 0; i < len(aiCards); i++ {
-		if aiCards[i].Card%MAHJONG_MASK >= MAHJONG_DONG {
-			return false
-		}
-		if aiCards[i].Num >= 2 {
-			if c := aiCards[i].Card % MAHJONG_MASK; c != MAHJONG_1 && c != MAHJONG_9 {
-				continue
-			}
-			aiCards[i].Num -= 2
-			for j := 0; ; {
-				for {
-					if j >= len(aiCards) {
-						return true
-					}
-					if aiCards[j].Num > 0 {
+	if ok, groups := CheckCommonHu(cards, true); ok {
+		for _, group := range groups {
+			all19 := true
+			for _, v := range group {
+				if v[0] == v[1] {
+					if c := v[0] % MAHJONG_MASK; c != MAHJONG_1 && c != MAHJONG_9 {
+						all19 = false
 						break
 					}
-					j++
-				}
-				c := aiCards[j].Card % MAHJONG_MASK
-				if c != MAHJONG_1 && c != MAHJONG_7 && c != MAHJONG_9 {
-					break
-				}
-				if c == MAHJONG_9 {
-					aiCards[j].Num = 0
 				} else {
-					if aiCards[j].Num >= 3 {
-						if j >= len(aiCards)-2 || aiCards[j+1].Num == 0 || aiCards[j+2].Num == 0 ||
-							aiCards[j+1].Card-aiCards[j].Card != 1 || aiCards[j+2].Card-aiCards[j+1].Card != 1 ||
-							aiCards[j].Num != aiCards[j+1].Num || aiCards[j+1].Num != aiCards[j+2].Num {
-							if c == MAHJONG_1 {
-								aiCards[j].Num -= 3
-							} else {
-								break
-							}
-						} else {
-							aiCards[j].Num = 0
-							aiCards[j+1].Num = 0
-							aiCards[j+2].Num = 0
-						}
-					} else {
-						aiCards[j].Num--
-						aiCards[j+1].Num--
-						aiCards[j+2].Num--
+					if c := v[0] % MAHJONG_MASK; c != MAHJONG_1 && c != MAHJONG_7 {
+						all19 = false
+						break
 					}
 				}
 			}
-			copy(aiCards, aiCardsBk)
+			if all19 {
+				return true
+			}
 		}
 	}
 	return false
@@ -888,6 +872,9 @@ func CheckDai19(chiCard []*ChiCard, cards []AICard) bool {
 
 //用于四川麻将的将对（对对胡并且每组都有258）
 func CheckDai258(chiCard []*ChiCard, cards []AICard) bool {
+	if !CheckDuiDuiHu(chiCard, cards) {
+		return false
+	}
 	for _, v := range chiCard {
 		if c := v.CardId % MAHJONG_MASK; c != MAHJONG_2 && c != MAHJONG_5 && c != MAHJONG_8 {
 			return false
@@ -901,14 +888,49 @@ func CheckDai258(chiCard []*ChiCard, cards []AICard) bool {
 	return true
 }
 
-//用于特殊七对
+//用于四川麻将的中张
+func CheckZhongZhang(chiCard []*ChiCard, cards []AICard) bool {
+	for _, v := range chiCard {
+		if v.CardType == MJ_CHI_CHI {
+			card := v.CardId
+			if v.ChiPosBit&(0x01<<1) != 0 {
+				card = v.CardId - 2
+			} else if v.ChiPosBit&(0x01<<2) != 0 {
+				card = v.CardId - 1
+			}
+			if c := card % MAHJONG_MASK; c == MAHJONG_1 || c == MAHJONG_7 {
+				return false
+			}
+		} else {
+			if c := v.CardId % MAHJONG_MASK; c == MAHJONG_1 || c == MAHJONG_9 {
+				return false
+			}
+		}
+	}
+	for i := 0; i < len(cards); i++ {
+		if c := cards[i].Card % MAHJONG_MASK; c == MAHJONG_1 || c == MAHJONG_9 {
+			return false
+		}
+	}
+	return true
+}
+
+//用于四川麻将根
 func GetLongNum(chiCard []*ChiCard, cards []AICard) int32 {
-	if len(chiCard) > 0 {
-		return 0
+	cardNum := map[int32]int32{}
+	for _, v := range chiCard {
+		if v.CardType == MJ_CHI_GANG || v.CardType == MJ_CHI_GANG_WAN || v.CardType == MJ_CHI_GANG_AN {
+			cardNum[v.CardId] += 4
+		} else if v.CardType == MJ_CHI_PENG {
+			cardNum[v.CardId] += 3
+		}
+	}
+	for i := 0; i < len(cards); i++ {
+		cardNum[cards[i].Card] += cards[i].Num
 	}
 	longNum := int32(0)
-	for i := 0; i < len(cards); i++ {
-		if cards[i].Num == 4 {
+	for _, v := range cardNum {
+		if v == 4 {
 			longNum++
 		}
 	}
@@ -924,6 +946,30 @@ func CheckQuanLaoTou(chiCard []*ChiCard, cards []AICard) bool {
 	}
 	for i := 0; i < len(cards); i++ {
 		if c := cards[i].Card % MAHJONG_MASK; c < MAHJONG_DONG || c > MAHJONG_BAI {
+			return false
+		}
+	}
+	return true
+}
+
+//四花齐放，同时拥有春夏秋冬或梅兰竹菊
+func CheckFourHua(huaCards []int32) bool {
+	if len(huaCards) >= 4 && len(huaCards) < 8 {
+		bitHua := uint8(0)
+		for _, v := range huaCards {
+			bitHua |= 0x01 << uint8(v-(COLOR_OTHER*MAHJONG_MASK+MAHJONG_SPRING))
+		}
+		if bitHua&0x0f == 0x0f || bitHua&0xf0 == 0xf0 {
+			return true
+		}
+	}
+	return false
+}
+
+//检查门清
+func CheckMenQing(chiCard []*ChiCard) bool {
+	for _, v := range chiCard {
+		if v.CardType != MJ_CHI_GANG_AN {
 			return false
 		}
 	}
