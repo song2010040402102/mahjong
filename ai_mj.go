@@ -1,7 +1,6 @@
 package logic
 
-import (
-	"config"
+import (	
 	"github.com/astaxie/beego/logs"
 	"math"
 	"sort"
@@ -18,18 +17,18 @@ type CardValue struct {
 	Val  float32
 }
 
-func ReplaceBaiWithLZ(chiCard []*ChiCard, aiCards []AICard, lzCards []int32) {
+func ReplaceCardWithLZ(chiCard []*ChiCard, aiCards []AICard, lzCards []int32, card int32) {
 	if len(lzCards) == 0 {
 		return
 	}
 	for _, v := range chiCard {
-		if v.CardId == COLOR_OTHER*MAHJONG_MASK+MAHJONG_BAI && v.CardType == MJ_CHI_CHI {
+		if v.CardId == card && v.CardType == MJ_CHI_CHI {
 			v.CardId = lzCards[0]
 		}
 	}
 
 	for i := 0; i < len(aiCards); i++ {
-		if aiCards[i].Card == COLOR_OTHER*MAHJONG_MASK+MAHJONG_BAI {
+		if aiCards[i].Card == card {
 			aiCards[i].Card = lzCards[0]
 			sort.Slice(aiCards, func(i, j int) bool { return aiCards[i].Card < aiCards[j].Card })
 			break
@@ -37,18 +36,18 @@ func ReplaceBaiWithLZ(chiCard []*ChiCard, aiCards []AICard, lzCards []int32) {
 	}
 }
 
-func ReplaceLZWithBai(chiCard []*ChiCard, aiCards []AICard, lzCards []int32) {
+func ReplaceLZWithCard(chiCard []*ChiCard, aiCards []AICard, lzCards []int32, card int32) {
 	if len(lzCards) == 0 {
 		return
 	}
 	for _, v := range chiCard {
 		if v.CardId == lzCards[0] && v.CardType == MJ_CHI_CHI {
-			v.CardId = COLOR_OTHER*MAHJONG_MASK + MAHJONG_BAI
+			v.CardId = card
 		}
 	}
 	for i := 0; i < len(aiCards); i++ {
 		if aiCards[i].Card == lzCards[0] {
-			aiCards[i].Card = COLOR_OTHER*MAHJONG_MASK + MAHJONG_BAI
+			aiCards[i].Card = card
 			sort.Slice(aiCards, func(i, j int) bool { return aiCards[i].Card < aiCards[j].Card })
 			break
 		}
@@ -98,15 +97,26 @@ func ConvertSliceToAICard(holdCards []int32, card int32, lzCards []int32) ([]AIC
 //获取牌价值
 func GetCardValue(rule IMahjong, holdCards []int32, moCard int32) []CardValue {
 	aiCards, _ := ConvertSliceToAICard(holdCards, moCard, rule.GetLaiziCard())
-	if rule.IsCanBaiReplaceLZ() == true {
-		ReplaceBaiWithLZ([]*ChiCard{}, aiCards, rule.GetLaiziCard())
+	if card := rule.GetCardForReplaceLZ(); card > 0 {
+		ReplaceCardWithLZ([]*ChiCard{}, aiCards, rule.GetLaiziCard(), card)
 	}
-	valCards := analyzeCardValue(aiCards)
-	if rule.IsCanBaiReplaceLZ() == true {
+	lzCards := []int32{}
+	for _, v := range holdCards {
+		if rule.IsLaiziCard(v) {
+			lzCards = append(lzCards, v)
+		}
+	}
+	if rule.IsLaiziCard(moCard) {
+		lzCards = append(lzCards, moCard)
+	}
+	sort.Slice(lzCards, func(i, j int) bool { return lzCards[i] < lzCards[j] })
+	lzCards = util.UniqueSlice(lzCards).([]int32)
+	valCards := analyzeCardValue(aiCards, lzCards)
+	if card := rule.GetCardForReplaceLZ(); card > 0 {
 		for i := 0; i < len(valCards); i++ {
 			lzCards := rule.GetLaiziCard()
 			if len(lzCards) > 0 && valCards[i].Card == lzCards[0] {
-				valCards[i].Card = COLOR_OTHER*MAHJONG_MASK + MAHJONG_BAI
+				valCards[i].Card = card
 				break
 			}
 		}
@@ -114,7 +124,7 @@ func GetCardValue(rule IMahjong, holdCards []int32, moCard int32) []CardValue {
 	return valCards
 }
 
-func analyzeCardValue(aiCards []AICard) []CardValue {
+func analyzeCardValue(aiCards []AICard, lzCards []int32) []CardValue {
 	//对每张牌进行价值评估，由位置、距离、数量三个指标构成
 	valCards := make([]CardValue, len(aiCards))
 	for i := 0; i < len(aiCards); i++ {
@@ -144,6 +154,9 @@ func analyzeCardValue(aiCards []AICard) []CardValue {
 		valCards[i].Card = aiCards[i].Card
 		valCards[i].Val += val
 	}
+	for _, v := range lzCards {
+		valCards = append(valCards, CardValue{v, float32(1e9)})
+	}
 	sort.Slice(valCards, func(i, j int) bool { return valCards[i].Val <= valCards[j].Val })
 	return valCards
 }
@@ -154,7 +167,7 @@ func removeSolKeSeq(rule IMahjong, cards []int32) []int32 {
 		for i := 0; i < len(cards); i++ {
 			if rule.IsLaiziCard(cards[i]) == true {
 				cards[i] = MAHJONG_LZ
-			} else if rule.IsCanBaiReplaceLZ() == true && cards[i] == MAHJONG_MASK*COLOR_OTHER+MAHJONG_BAI {
+			} else if card := rule.GetCardForReplaceLZ(); card > 0 && cards[i] == card {
 				cards[i] = lzCards[0]
 			}
 		}
@@ -178,8 +191,8 @@ func removeSolKeSeq(rule IMahjong, cards []int32) []int32 {
 		for i := 0; i < len(cards); i++ {
 			if cards[i] == MAHJONG_LZ {
 				cards[i] = lzCards[0]
-			} else if rule.IsCanBaiReplaceLZ() == true && rule.IsLaiziCard(cards[i]) == true {
-				cards[i] = MAHJONG_MASK*COLOR_OTHER + MAHJONG_BAI
+			} else if card := rule.GetCardForReplaceLZ(); card > 0 && rule.IsLaiziCard(cards[i]) {
+				cards[i] = card
 			}
 		}
 	}
@@ -195,13 +208,13 @@ type IAIMj interface {
 	//设置级别
 	SetLevel(level int32)
 	//获取发牌，可控制机器人起手牌
-	GetDealCards() []int32
+	GetDealCards(cards []int32, cardNum int32, level int32, retry bool) int32
 	//获取下一张牌，可控制机器人摸牌
-	GetNextCards(index int32) []int32
+	GetNextCards(index int32, level int32, robot bool) []int32
 	//托管出牌
-	GetCardForMandate(index int32, moCard int32) int32
+	GetCardForMandate(index int32, moCard int32, cards []int32) int32
 	//机器人出牌
-	GetCardForRobot(index int32, moCard int32) int32
+	GetCardForRobot(index int32, moCard int32, cards []int32) int32
 	//托管吃牌
 	GetChiForMandate(index int32, moCard int32, chiCards []*ChiCard) *ChiCard
 	//机器人吃牌
@@ -229,77 +242,60 @@ func (ai *AIMjBase) SetAllCard(holdCards map[int32][]int32, chiCards map[int32][
 }
 
 func (ai *AIMjBase) SetLevel(level int32) {
-	ai.level = level	
-	logs.Info("AI SetLevel, level: ", level)
+	ai.level = level
+	logs.Info("[AIMjBase]SetLevel, level: ", level)
 }
 
-func (ai *AIMjBase) GetDealCards() []int32 {
-	if ai.level == ROBOT_LEVEL_MASTER {
-		cards := []int32{}
-		if util.GetRandomRate() < 0.7 { //70%概率混一色加箭刻
-			jian := MAHJONG_MASK*COLOR_OTHER + MAHJONG_HONGZHONG + util.GetRandom(0, 2)
-			cards = append(cards, []int32{jian, jian, jian}...)
-		}
-
-		colors := []int32{}
-		if ai.rule.GetDeck().GetFlag()&WITH_WAN != 0 {
-			colors = append(colors, COLOR_WAN)
-		}
-		if ai.rule.GetDeck().GetFlag()&WITH_TONG != 0 {
-			colors = append(colors, COLOR_TONG)
-		}
-		if ai.rule.GetDeck().GetFlag()&WITH_TIAO != 0 {
-			colors = append(colors, COLOR_TIAO)
-		}
-		color := colors[util.GetRandom(0, int32(len(colors)-1))]
-
-		mc := make(map[int32]int32)
-		cardNum := ai.rule.GetPlayerCardNum()
-		for {
-			c := color*MAHJONG_MASK + util.GetRandom(MAHJONG_1, MAHJONG_9)
-			if mc[c] >= 4 {
-				continue
-			}
-			mc[c]++
-			cards = append(cards, c)
-			if int32(len(cards)) >= cardNum {
-				break
-			}
-		}
-		logs.Info("[AIMjBase]GetDealCards, cards: ", cards)
-		return cards
+func (ai *AIMjBase) GetDealCards(cards []int32, cardNum int32, level int32, retry bool) int32 {
+	if level == CARD_LEVEL_QINGYISE {
+		return ai.getDealCardsQingyise(cards, cardNum, retry)
+	} else if level == CARD_LEVEL_DUIDUIHU {
+		return ai.getDealCardsDuiduihu(cards, cardNum, retry)
+	} else if level == CARD_LEVEL_UNRELATE {
+		return ai.getDealCardsUnrelate(cards, cardNum, retry)
+	} else {
+		logs.Error("[AIMjBase]GetDealCards, level invalid!")
 	}
-	return []int32{}
+	return 0
 }
 
-func (ai *AIMjBase) GetNextCards(index int32) []int32 {
-	if ai.level == ROBOT_LEVEL_NOOB {
-		_, tings := ai.rule.CheckNTing(ai.chiCards[index], ai.holdCards[index], 1, false)
-		if len(tings) > 0 {
+func (ai *AIMjBase) GetNextCards(index int32, level int32, robot bool) []int32 {
+	if level == MO_LEVEL_BAD {
+		if robot {
+			_, tings := ai.rule.CheckNTing(ai.chiCards[index], ai.holdCards[index], 1, false)
+			if len(tings) > 0 {
+				return ai.getUnusedCards(index)
+			}
+		} else {
 			return ai.getUnusedCards(index)
 		}
-	} else if ai.level == ROBOT_LEVEL_MASTER {
-		if util.GetRandomRate() < 0.5 { //一半的概率能摸到想要的牌
-			return ai.getNeedCards(index)
-		}
+	} else if level == MO_LEVEL_GOOD {
+		return ai.getNeedCards(index)
 	}
 	return []int32{}
 }
 
-func (ai *AIMjBase) GetCardForMandate(index int32, moCard int32) int32 {
-	if *config.FLAG_DEBUG == 1 || moCard == 0 || ai.rule.IsLaiziCard(moCard) == true {
-		return ai.getCardForWeight(ai.holdCards[index], moCard)
+func (ai *AIMjBase) GetCardForMandate(index int32, moCard int32, cards []int32) int32 {
+	moAllow := false
+	for _, v := range cards {
+		if v == moCard {
+			moAllow = true
+			break
+		}
+	}
+	if moCard == 0 || !moAllow || ai.rule.IsLaiziCard(moCard) {
+		return ai.getCardForWeight(ai.holdCards[index], moCard, cards)
 	}
 	return moCard
 }
 
-func (ai *AIMjBase) GetCardForRobot(index int32, moCard int32) int32 {
+func (ai *AIMjBase) GetCardForRobot(index int32, moCard int32, cards []int32) int32 {
 	if ai.level == ROBOT_LEVEL_NOOB || ai.level == ROBOT_LEVEL_AMATEUR {
-		return ai.getCardForWeight(ai.holdCards[index], moCard)
+		return ai.getCardForWeight(ai.holdCards[index], moCard, cards)
 	} else if ai.level == ROBOT_LEVEL_MAJOR || ai.level == ROBOT_LEVEL_MASTER {
-		return ai.getCardForTingNum(ai.holdCards[index], moCard, index, ai.chiCards[index])
+		return ai.getCardForTingNum(ai.holdCards[index], moCard, cards, index, ai.chiCards[index])
 	} else {
-		logs.Error("GetCardForRobot, level invalid!")
+		logs.Error("[AIMjBase]GetCardForRobot, level invalid!")
 	}
 	return 0
 }
@@ -325,7 +321,7 @@ func (ai *AIMjBase) GetChiForRobot(index int32, moCard int32, chiCards []*ChiCar
 	}
 	chiCard := NewChiCard()
 	*chiCard = *chiCards[0]
-	chiCard.ChiPosBit = 0
+	chiCard.SelectFirstChi()
 	if ai.level == ROBOT_LEVEL_NOOB { //菜鸟级机器人在一上一听阶段截住吃和碰
 		if chiCard.CardType == MJ_CHI_PENG || chiCard.CardType == MJ_CHI_CHI {
 			_, tings := ai.rule.CheckNTing(ai.chiCards[index], ai.holdCards[index], 1, false)
@@ -338,7 +334,7 @@ func (ai *AIMjBase) GetChiForRobot(index int32, moCard int32, chiCards []*ChiCar
 	} else if ai.level == ROBOT_LEVEL_MAJOR || ai.level == ROBOT_LEVEL_MASTER { //专家级和大师级向听分析胡杠碰吃过
 		/* 对于杠碰吃过的选择应该由向听数是否减少来决定
 		** 胡牌和独立杠基本不依赖特定规则，所以可以直接处理
-		** 碰和吃的独立依赖于特定规则，例如碰可能会破坏将或七对，吃可能会破坏全不靠
+		** 碰和吃的独立依赖于特定规则，例如碰可能会破坏将或七对
 		 */
 		if chiCard.CardType == MJ_CHI_HU {
 			return chiCard
@@ -368,11 +364,11 @@ func (ai *AIMjBase) GetChiForRobot(index int32, moCard int32, chiCards []*ChiCar
 
 		if moCard > 0 {
 			preCards = append(preCards, moCard)
-			playC := ai.getCardForTingNum(preCards, 0, index, ai.chiCards[index])
+			playC := ai.getCardForTingNum(preCards, 0, preCards, index, ai.chiCards[index])
 			preCards = util.RemoveSliceElem(preCards, playC, false).([]int32)
 		}
-		preN := ai.getMainCardTingNum(ai.chiCards[index], preCards)
-		logs.Info("GetChiForRobot, pass, preN: ", preN)
+		preN, delN := ai.getMainCardTingNum(ai.chiCards[index], preCards, 0)
+		logs.Info("[AIMjBase]GetChiForRobot, pass, preN: ", preN)
 
 		for _, v := range newChiCards {
 			curCards := make([]int32, len(ai.holdCards[index]))
@@ -409,20 +405,23 @@ func (ai *AIMjBase) GetChiForRobot(index int32, moCard int32, chiCards []*ChiCar
 					}
 				}
 			}
+			playC := int32(0)
 			if v.CardType == MJ_CHI_PENG || v.CardType == MJ_CHI_CHI {
-				playC := ai.getCardForTingNum(curCards, 0, index, curChis)
+				playC = ai.getCardForTingNum(curCards, 0, curCards, index, curChis)
 				curCards = util.RemoveSliceElem(curCards, playC, false).([]int32)
 			}
-			curN := ai.getMainCardTingNum(curChis, curCards)
-			if curN < preN || curN == preN && v.CardType >= MJ_CHI_GANG && v.CardType <= MJ_CHI_GANG_AN {
-				//杠不会进听，所以如果没有退听，可以优先杠，对于吃和碰，可能退换进听，对于换听，理想情况下应该考虑换听后的听牌总数，但意义不大会有损效率
-				preN = curN
-				*chiCard = *v
+			if playC != v.CardId { //避免吃碰的牌和打牌相等
+				curN, _ := ai.getMainCardTingNum(curChis, curCards, delN)
+				if curN < preN || curN == preN && v.CardType >= MJ_CHI_GANG && v.CardType <= MJ_CHI_GANG_AN {
+					//杠不会进听，所以如果没有退听，可以优先杠，对于吃和碰，可能退换进听，对于换听，理想情况下应该考虑换听后的听牌总数，但意义不大会有损效率
+					preN = curN
+					*chiCard = *v
+				}
+				logs.Info("[AIMjBase]GetChiForRobot, type: ", v.CardType, " curN: ", curN)
 			}
-			logs.Info("GetChiForRobot, type: ", v.CardType, " curN: ", curN)
 		}
 	} else {
-		logs.Error("GetChiForRobot, level invalid!")
+		logs.Error("[AIMjBase]GetChiForRobot, level invalid!")
 		return nil
 	}
 	return chiCard
@@ -432,7 +431,7 @@ func (ai *AIMjBase) GetChiForRobot(index int32, moCard int32, chiCards []*ChiCar
 func (ai *AIMjBase) getCardForRand(holdCards []int32, moCard int32) int32 {
 	aiCards, _ := ConvertSliceToAICard(holdCards, moCard, ai.rule.GetLaiziCard())
 	if len(aiCards) == 0 {
-		logs.Error("getCardForRand, aiCards empty!")
+		logs.Error("[AIMjBase]getCardForRand, aiCards empty!")
 		return 0
 	}
 	index := util.GetRandom(0, int32(len(aiCards)-1))
@@ -440,33 +439,46 @@ func (ai *AIMjBase) getCardForRand(holdCards []int32, moCard int32) int32 {
 }
 
 //权重出牌
-func (ai *AIMjBase) getCardForWeight(holdCards []int32, moCard int32) int32 {
+func (ai *AIMjBase) getCardForWeight(holdCards []int32, moCard int32, allowCards []int32) int32 {
 	valCards := GetCardValue(ai.rule, holdCards, moCard)
-	if len(valCards) == 0 {
-		logs.Error("getCardForWeight, valCards empty!")
-		return 0
+	for _, v := range valCards {
+		for _, vv := range allowCards {
+			if v.Card == vv {
+				return v.Card
+			}
+		}
 	}
-	return valCards[0].Card
+	return 0
 }
 
 //向听数出牌
-func (ai *AIMjBase) getCardForTingNum(holdCards []int32, moCard int32, index int32, chiCards []*ChiCard) int32 {
+func (ai *AIMjBase) getCardForTingNum(holdCards []int32, moCard int32, allowCards []int32, index int32, chiCards []*ChiCard) int32 {
 	cards := make([]int32, len(holdCards))
 	copy(cards, holdCards)
 	if moCard > 0 {
 		cards = append(cards, moCard)
 	}
 	sort.Slice(cards, func(i, j int) bool { return cards[i] < cards[j] })
-	if len(cards) > 3 {
-		cards = removeSolKeSeq(ai.rule, cards)
-	}
 
 	valCards := GetCardValue(ai.rule, cards, 0)
+	for i := 0; i < len(valCards); i++ {
+		exist := false
+		for _, v := range allowCards {
+			if valCards[i].Card == v {
+				exist = true
+				break
+			}
+		}
+		if !exist {
+			valCards = append(valCards[:i], valCards[i+1:]...)
+			i--
+		}
+	}
 	if len(valCards) == 0 {
-		logs.Error("getCardForTingNum, valCards empty!")
+		logs.Error("[AIMjBase]getCardForTingNum, valCards empty!")
 		return 0
 	}
-	logs.Info("getCardForTingNum, cards: ", cards, " valCards: ", valCards)
+	logs.Info("[AIMjBase]getCardForTingNum, cards: ", cards, " valCards: ", valCards)
 
 	//直接打出唯一牌
 	if len(valCards) == 1 {
@@ -511,7 +523,6 @@ func (ai *AIMjBase) getCardForTingNum(holdCards []int32, moCard int32, index int
 		cards = util.RemoveSliceElem(cards, vc.Card, false).([]int32)
 		realN, tings := ai.rule.CheckNTing(chiCards, cards, minTingN, true)
 		if len(tings) > 0 {
-			logs.Info("getCardForTingNum, cards: ", cards, " c: ", vc.Card, " realN: ", realN, " tings: ", tings)
 			tingV := int32(0)
 			for _, v := range tings {
 				tingV += ai.getCardRemainNum(cards, chiCards, index, v)
@@ -526,7 +537,7 @@ func (ai *AIMjBase) getCardForTingNum(holdCards []int32, moCard int32, index int
 	if maxTingC == 0 {
 		maxTingC = valCards[0].Card
 	}
-	logs.Info("getCardForTingNum, maxTingC: ", maxTingC, " minTingN: ", minTingN, " maxTingV: ", maxTingV)
+	logs.Info("[AIMjBase]getCardForTingNum, maxTingC: ", maxTingC, " minTingN: ", minTingN, " maxTingV: ", maxTingV)
 	return maxTingC
 }
 
@@ -539,7 +550,7 @@ func (ai *AIMjBase) getAloneGang(index int32, moCard int32, chiCards []*ChiCard)
 		sort.Slice(cards, func(i, j int) bool { return cards[i] < cards[j] })
 		for _, v := range chiCards {
 			card := v.CardId
-			if ai.rule.IsCanBaiReplaceLZ() == true && v.CardId == COLOR_OTHER*MAHJONG_MASK+MAHJONG_BAI {
+			if c := ai.rule.GetCardForReplaceLZ(); c > 0 && v.CardId == c {
 				lzCards := ai.rule.GetLaiziCard()
 				if len(lzCards) > 0 {
 					card = lzCards[0]
@@ -563,40 +574,34 @@ func (ai *AIMjBase) getAloneGang(index int32, moCard int32, chiCards []*ChiCard)
 	return nil
 }
 
-//移除单张牌
-func (ai *AIMjBase) removeSingleCard(chiCards []*ChiCard, cards []int32) []int32 {
-	huaCards := []int32{}
-	for _, v := range cards {
-		if ai.rule.IsHuaCard(v) {
-			huaCards = append(huaCards, v)
-		}
-	}
-	for _, v := range huaCards {
-		cards = util.RemoveSliceElem(cards, v, false).([]int32)
-	}
-	singleN := 0
-	valCards := GetCardValue(ai.rule, cards, 0)
-	for _, v := range valCards {
-		if v.Val <= ai_rel_edg_val {
-			singleN++
-		} else {
-			break
-		}
-	}
-	if singleN > 3 {
-		for i := 0; i < singleN-singleN%3; i++ {
-			cards = util.RemoveSliceElem(cards, valCards[i].Card, false).([]int32)
-		}
-	}
-	return cards
-}
-
 //获取主牌的向听数
-func (ai *AIMjBase) getMainCardTingNum(chiCards []*ChiCard, holdCards []int32) int32 {
+func (ai *AIMjBase) getMainCardTingNum(chiCards []*ChiCard, holdCards []int32, delN int32) (int32, int32) {
 	cards := make([]int32, len(holdCards))
 	copy(cards, holdCards)
 	sort.Slice(cards, func(i, j int) bool { return cards[i] < cards[j] })
-	cards = ai.removeSingleCard(chiCards, cards)
+
+	valCards := GetCardValue(ai.rule, cards, 0)
+	if delN == 0 {
+		singleN := 0
+		for _, v := range valCards {
+			if v.Val <= ai_rel_edg_val {
+				singleN++
+			} else {
+				break
+			}
+		}
+		if singleN > 3 {
+			for i := 0; i < singleN-singleN%3; i++ {
+				cards = util.RemoveSliceElem(cards, valCards[i].Card, false).([]int32)
+				delN++
+			}
+		}
+	} else {
+		for i := int32(0); i < delN; i++ {
+			cards = util.RemoveSliceElem(cards, valCards[i].Card, false).([]int32)
+		}
+	}
+
 	if len(cards) > 3 {
 		cards = removeSolKeSeq(ai.rule, cards)
 	}
@@ -610,10 +615,10 @@ func (ai *AIMjBase) getMainCardTingNum(chiCards []*ChiCard, holdCards []int32) i
 	realN, _ := ai.rule.CheckNTing(chiCards, cards, maxN, false)
 	if realN < 0 {
 		realN = int32(len(cards) * 2)
-		logs.Error("getMainCardTingNum, maxN error!")
+		logs.Error("[AIMjBase]getMainCardTingNum, maxN error!")
 	}
-	logs.Info("getMainCardTingNum, cards: ", cards, " maxN: ", maxN, " realN: ", realN)
-	return realN
+	logs.Info("[AIMjBase]getMainCardTingNum, cards: ", cards, " maxN: ", maxN, " realN: ", realN)
+	return realN, delN
 }
 
 /* 获取可能的剩余牌数
@@ -671,10 +676,10 @@ func (ai *AIMjBase) getUnusedCards(index int32) []int32 {
 	unusedC := []int32{}
 	lzCards := ai.rule.GetLaiziCard()
 	aiCards, _ := ConvertSliceToAICard(ai.holdCards[index], 0, lzCards)
-	if ai.rule.IsCanBaiReplaceLZ() == true {
+	if card := ai.rule.GetCardForReplaceLZ(); card > 0 {
 		if len(lzCards) > 0 {
 			for _, v := range aiCards {
-				if v.Card == COLOR_OTHER*MAHJONG_MASK+MAHJONG_BAI {
+				if v.Card == card {
 					aiCards = append(aiCards, AICard{lzCards[0], 1})
 					sort.Slice(aiCards, func(i, j int) bool { return aiCards[i].Card < aiCards[j].Card })
 					break
@@ -753,11 +758,115 @@ func (ai *AIMjBase) getNeedCards(index int32) []int32 {
 	}
 	if len(needC) == 0 {
 		for _, v := range aiCards {
-			if ai.rule.IsLaiziCard(v.Card) == true {
+			if ai.rule.IsLaiziCard(v.Card) {
 				continue
 			}
 			needC = append(needC, v.Card)
 		}
 	}
 	return needC
+}
+
+//清一色发牌
+func (ai *AIMjBase) getDealCardsQingyise(cards []int32, cardNum int32, retry bool) int32 {
+	card := int32(0)
+	colors := ai.rule.GetDeck().GetColors(false)
+	if len(colors) == 0 {
+		return card
+	}
+	color, mjN, start, offset := int32(0), int32(0), int32(0), int32(6) //offset越小牌越好
+	if len(cards) == 0 {
+		color = colors[util.GetRandom(0, int32(len(colors)-1))]
+		start = util.GetRandom(MAHJONG_1, MAHJONG_9-MAHJONG_1-offset+2)
+		mjN = start
+	} else {
+		color = cards[0] / MAHJONG_MASK
+		start = cards[0] % MAHJONG_MASK
+		mjN = util.GetRandom(start, start+offset-1)
+	}
+	if ai.rule.IsNeedSwapCard() {
+		if int32(len(cards)) == cardNum {
+			color = colors[util.GetRandom(0, int32(len(colors)-1))]
+		} else if int32(len(cards)) > cardNum {
+			color = cards[cardNum] / MAHJONG_MASK
+		}
+	}
+	card = color*MAHJONG_MASK + mjN
+	return card
+}
+
+//对对胡方向发牌
+func (ai *AIMjBase) getDealCardsDuiduihu(cards []int32, cardNum int32, retry bool) int32 {
+	card := int32(0)
+	colors := ai.rule.GetDeck().GetColors(true)
+	if len(colors) == 0 {
+		return card
+	}
+	color, mjN := int32(0), int32(0)
+	if len(cards) == 0 {
+		color = colors[0]
+		mjN = util.GetRandom(MAHJONG_1, MAHJONG_9)
+	} else {
+		num := util.GetRandom(1, 2)
+		color = cards[len(cards)-1] / MAHJONG_MASK
+		for i := len(cards) - 2; i >= 0; i-- {
+			if cards[i]/MAHJONG_MASK == color {
+				num--
+			} else {
+				break
+			}
+		}
+		if num > 0 && !retry {
+			mjN = cards[len(cards)-1] % MAHJONG_MASK
+		} else {
+			color++
+			if color > COLOR_OTHER {
+				color = COLOR_WAN
+			}
+			if color == COLOR_OTHER {
+				mjN = util.GetRandom(MAHJONG_DONG, MAHJONG_BAI)
+			} else {
+				mjN = util.GetRandom(MAHJONG_1, MAHJONG_9)
+			}
+		}
+	}
+	card = color*MAHJONG_MASK + mjN
+	return card
+}
+
+//无关联发牌
+func (ai *AIMjBase) getDealCardsUnrelate(cards []int32, cardNum int32, retry bool) int32 {
+	card := int32(0)
+	colors := ai.rule.GetDeck().GetColors(false)
+	if len(colors) == 0 {
+		return card
+	}
+	if int32(len(cards)) < cardNum/4 {
+		if ai.rule.GetDeck().GetFlag()&(WITH_FENG|WITH_JIAN) == WITH_FENG|WITH_JIAN {
+			card = COLOR_OTHER*MAHJONG_MASK + util.GetRandom(MAHJONG_DONG, MAHJONG_BAI)
+		} else if ai.rule.GetDeck().GetFlag()&WITH_FENG != 0 {
+			card = COLOR_OTHER*MAHJONG_MASK + util.GetRandom(MAHJONG_DONG, MAHJONG_BEI)
+		} else if ai.rule.GetDeck().GetFlag()&WITH_JIAN != 0 {
+			card = COLOR_OTHER*MAHJONG_MASK + util.GetRandom(MAHJONG_HONGZHONG, MAHJONG_BAI)
+		}
+	}
+	if card == 0 {
+		if len(cards) == 0 || cards[len(cards)-1]/MAHJONG_MASK == COLOR_OTHER {
+			card = colors[0]*MAHJONG_MASK + util.GetRandom(MAHJONG_1, MAHJONG_3)
+		} else {
+			if c := util.GetRandom(2, 4); cards[len(cards)-1]%MAHJONG_MASK+c <= MAHJONG_9 {
+				card = cards[len(cards)-1] + c
+			} else {
+				color := colors[0]
+				for _, v := range colors {
+					if v > cards[len(cards)-1]/MAHJONG_MASK {
+						color = v
+						break
+					}
+				}
+				card = color*MAHJONG_MASK + util.GetRandom(MAHJONG_1, MAHJONG_3)
+			}
+		}
+	}
+	return card
 }

@@ -4,11 +4,13 @@ import (
 	"fmt"
 	"sort"
 	"testing"
+	"time"
 	"util"
 )
 
 func TestBatchGetCardForRobot(t *testing.T) {
 	rule := NewRuleMahjong(RULE_ZJ_MAHJONG_TAIZHOU_HY)
+	rule.Init(0, 0)
 	rule.SetLaiziCard([]int32{101})
 	ai := &AIMjBase{}
 	ai.SetRule(rule)
@@ -19,19 +21,21 @@ func TestBatchGetCardForRobot(t *testing.T) {
 		sort.Slice(cards, func(i, j int) bool { return cards[i] < cards[j] })
 
 		ai.holdCards[1] = cards
-		aic := ai.GetCardForRobot(1, 0)
+		now := time.Now().UnixNano()
+		aic := ai.GetCardForRobot(1, 0, cards)
 
 		strRes := ""
 		for _, vv := range cards {
 			strRes += card2str(vv) + " "
 		}
-		strRes += fmt.Sprintf("-->> %s\n\n", card2str(aic))
+		strRes += fmt.Sprintf("-->> %s  %d\n\n", card2str(aic), time.Now().UnixNano()-now)
 		appendToFile("ai.txt", strRes)
 	}
 }
 
 func TestGetChiForRobot(t *testing.T) {
 	rule := NewRuleMahjong(RULE_ZJ_MAHJONG_TAIZHOU_HY)
+	rule.Init(0, 0)
 	rule.SetLaiziCard([]int32{101})
 	ai := &AIMjBase{}
 	ai.SetRule(rule)

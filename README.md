@@ -1,3 +1,5 @@
 # mahjong
 
-检查麻将胡牌、听牌算法，在mac、i5、1.8GHZ的cpu上测试，不带癞子的胡牌算法每秒可检测200W次，带癞子的每秒可检测150W次，不带赖子的听牌算法每秒可检测32W，带赖子的每秒可检测28万，若输入的牌型有序，速度会更快
+麻将项目中核心的AI逻辑及国标麻将结算逻辑  
+AI部分请参考[我的博客](http://songxuxu.top/blog/index.php/archives/32/ "songxuxu.top/blog")  
+国标麻将结算请参考[麻将牌型番数图解](https://pan.baidu.com/s/1RZqHPi_T1ldB76YXvn4AQw)
