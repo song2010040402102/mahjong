@@ -2,6 +2,8 @@ package util
 
 import (	
 	"reflect"	
+	"time"
+	"math/rand"	
 )
 
 func InSlice(slice interface{}, elem interface{}) bool {
@@ -101,4 +103,29 @@ func CopyMap(m interface{}) interface{} {
 		ret.SetMapIndex(key, valMap.MapIndex(key))
 	}
 	return ret.Interface()
+}
+
+func GetRandom(start int32, end int32) int32 {
+	src := rand.NewSource(time.Now().UnixNano())
+	r := rand.New(src)
+	if start > end {
+		return 0
+	}
+	return start + r.Int31n(end-start+1)
+}
+
+func GetNormRandom(start int32, end int32) int32 {
+	if start > end {
+		return 0
+	} else if start == end {
+		return start
+	}
+	r := rand.New(rand.NewSource(time.Now().UnixNano()))
+	for {
+		ret := int32(r.NormFloat64()*float64(end-start)/6 + float64(start+end)/2)
+		if ret >= start && ret <= end {
+			return ret
+		}
+	}
+	return 0
 }
