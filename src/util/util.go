@@ -7,90 +7,139 @@ import (
 )
 
 func InSlice(slice interface{}, elem interface{}) bool {
-	if reflect.TypeOf(slice).Kind() == reflect.Slice && reflect.TypeOf(slice).Elem() == reflect.TypeOf(elem) {
-		valSlice := reflect.ValueOf(slice)
-		valElem := reflect.ValueOf(elem)
-		for i := 0; i < valSlice.Len(); i++ {
-			if reflect.Int <= valElem.Kind() && valElem.Kind() <= reflect.Int64 && valSlice.Index(i).Int() == valElem.Int() ||
-				reflect.Uint <= valElem.Kind() && valElem.Kind() <= reflect.Uint64 && valSlice.Index(i).Uint() == valElem.Uint() ||
-				(valElem.Kind() == reflect.Float32 || valElem.Kind() == reflect.Float64) && valSlice.Index(i).Float() == valElem.Float() ||
-				valElem.Kind() == reflect.String && valSlice.Index(i).String() == valElem.String() {
-				return true
-			}
+	if reflect.TypeOf(slice).Kind() != reflect.Slice || reflect.TypeOf(slice).Elem() != reflect.TypeOf(elem) {
+		return false				
+	}	
+	if t := reflect.TypeOf(elem).Kind(); !(t >= reflect.Int && t <= reflect.Int64 || t >= reflect.Uint && t <= reflect.Uint64 ||
+		t == reflect.Float32 || t == reflect.Float64 || t == reflect.String) {
+		return false
+	}
+	valSlice := reflect.ValueOf(slice)
+	valElem := reflect.ValueOf(elem)
+	for i := 0; i < valSlice.Len(); i++ {
+		if valSlice.Index(i).Interface() == valElem.Interface() {
+			return true
 		}
 	}
 	return false
 }
 
 func InSlice2(slice interface{}, equal func(i int) bool) bool {
-	if reflect.TypeOf(slice).Kind() == reflect.Slice {
-		valSlice := reflect.ValueOf(slice)
-		for i := 0; i < valSlice.Len(); i++ {
-			if equal(i) {
-				return true
-			}
+	if reflect.TypeOf(slice).Kind() != reflect.Slice {
+		return false
+	}
+	valSlice := reflect.ValueOf(slice)
+	for i := 0; i < valSlice.Len(); i++ {
+		if equal(i) {
+			return true
 		}
 	}
 	return false
 }
 
 func RemoveSliceElem(slice interface{}, elem interface{}, all bool) interface{} {
-	if reflect.TypeOf(slice).Kind() == reflect.Slice && reflect.TypeOf(slice).Elem() == reflect.TypeOf(elem) {
-		valSlice := reflect.ValueOf(slice)
-		valElem := reflect.ValueOf(elem)
-		for i := 0; i < valSlice.Len(); i++ {
-			if reflect.Int <= valElem.Kind() && valElem.Kind() <= reflect.Int64 && valSlice.Index(i).Int() == valElem.Int() ||
-				reflect.Uint <= valElem.Kind() && valElem.Kind() <= reflect.Uint64 && valSlice.Index(i).Uint() == valElem.Uint() ||
-				(valElem.Kind() == reflect.Float32 || valElem.Kind() == reflect.Float64) && valSlice.Index(i).Float() == valElem.Float() ||
-				valElem.Kind() == reflect.String && valSlice.Index(i).String() == valElem.String() {
-				valSlice = reflect.AppendSlice(valSlice.Slice(0, i), valSlice.Slice(i+1, valSlice.Len()))
-				if all {
-					i--
-				} else {
-					break
-				}
+	if reflect.TypeOf(slice).Kind() != reflect.Slice || reflect.TypeOf(slice).Elem() != reflect.TypeOf(elem) {
+		return slice				
+	}	
+	if t := reflect.TypeOf(elem).Kind(); !(t >= reflect.Int && t <= reflect.Int64 || t >= reflect.Uint && t <= reflect.Uint64 ||
+		t == reflect.Float32 || t == reflect.Float64 || t == reflect.String) {
+		return slice
+	}
+	valSlice := reflect.ValueOf(slice)
+	valElem := reflect.ValueOf(elem)
+	for i := 0; i < valSlice.Len(); i++ {
+		if valSlice.Index(i).Interface() == valElem.Interface() {
+			valSlice = reflect.AppendSlice(valSlice.Slice(0, i), valSlice.Slice(i+1, valSlice.Len()))
+			if all {
+				i--
+			} else {
+				break
 			}
 		}
-		return valSlice.Interface()
 	}
-	return slice
+	return valSlice.Interface()	
 }
 
 func RemoveSliceElem2(slice interface{}, equal func(i int) bool, all bool) interface{} {
-	if reflect.TypeOf(slice).Kind() == reflect.Slice {
-		valSlice := reflect.ValueOf(slice)
-		for i := 0; i < valSlice.Len(); i++ {
-			if equal(i) {
-				valSlice = reflect.AppendSlice(valSlice.Slice(0, i), valSlice.Slice(i+1, valSlice.Len()))
-				if all {
-					i--
-				} else {
-					break
-				}
+	if reflect.TypeOf(slice).Kind() != reflect.Slice {
+		return slice	
+	}
+	valSlice := reflect.ValueOf(slice)
+	for i := 0; i < valSlice.Len(); i++ {
+		if equal(i) {
+			valSlice = reflect.AppendSlice(valSlice.Slice(0, i), valSlice.Slice(i+1, valSlice.Len()))
+			if all {
+				i--
+			} else {
+				break
 			}
 		}
-		return valSlice.Interface()
 	}
-	return slice
+	return valSlice.Interface()
 }
 
-func UniqueSlice(slice interface{}) interface{} {
-	//slice提前排序
+func UniqueSlice(slice interface{}, bSort bool) interface{} {	
 	if reflect.TypeOf(slice).Kind() != reflect.Slice {
+		return slice
+	}	
+	if t := reflect.TypeOf(slice).Elem().Kind(); !(t >= reflect.Int && t <= reflect.Int64 || t >= reflect.Uint && t <= reflect.Uint64 ||
+		t == reflect.Float32 || t == reflect.Float64 || t == reflect.String) {
 		return slice
 	}
 	valSlice := reflect.ValueOf(slice)
 	if valSlice.Len() < 2 {
 		return slice
-	}
-	ret := reflect.MakeSlice(reflect.TypeOf(slice), 0, 0)
+	}	
 	for i := 0; i < valSlice.Len(); i++ {
-		if i > 0 && valSlice.Index(i-1).Interface() == valSlice.Index(i).Interface() {
-			continue
+		bDel := false
+		if bSort {
+			if i > 0 && valSlice.Index(i-1).Interface() == valSlice.Index(i).Interface() {
+				bDel = true
+			}
+		} else {			
+			for j := 0; j < i; j++ {
+				if valSlice.Index(j).Interface() == valSlice.Index(i).Interface() {
+					bDel = true
+					break
+				}
+			}			
+		}				
+		if bDel {
+			valSlice = reflect.AppendSlice(valSlice.Slice(0, i), valSlice.Slice(i+1, valSlice.Len()))
+			i--
 		}
-		ret = reflect.Append(ret, valSlice.Index(i))
 	}
-	return ret.Interface()
+	return valSlice.Interface()
+}
+
+func UniqueSlice2(slice interface{}, equal func(i, j int) bool,  bSort bool) interface{} {	
+	if reflect.TypeOf(slice).Kind() != reflect.Slice {
+		return slice
+	}		
+	valSlice := reflect.ValueOf(slice)
+	if valSlice.Len() < 2 {
+		return slice
+	}
+	for i := 0; i < valSlice.Len(); i++ {
+		bDel := false
+		if bSort {
+			if i > 0 && equal(i-1, i) {
+				bDel = true
+			}
+		} else {			
+			for j := 0; j < i; j++ {
+				if equal(j, i) {
+					bDel = true
+					break
+				}
+			}			
+		}				
+		if bDel {
+			valSlice = reflect.AppendSlice(valSlice.Slice(0, i), valSlice.Slice(i+1, valSlice.Len()))
+			i--
+		}
+	}
+	return valSlice.Interface()	
 }
 
 func CopyMap(m interface{}) interface{} {

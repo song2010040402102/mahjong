@@ -1,14 +1,14 @@
 package mahjong
 
 const (
-	RULE_MAHJONG_GUOBIAO int32 = 1001
-	RULE_SC_MAHJONG_XUELIU int32 = 1002
-	RULE_SC_MAHJONG_XUEZHAN int32 = 1003
+	RULE_MAHJONG_GUOBIAO      int32 = 1001
+	RULE_SC_MAHJONG_XUELIU    int32 = 1002
+	RULE_SC_MAHJONG_XUEZHAN   int32 = 1003
 	RULE_HN_MAHJONG_HONGZHONG int32 = 1004
 )
 
 const (
-	MJ_CHECK_HU_FLAG_GROUP     uint32 = uint32(0x01) << 0
+	MJ_CHECK_HU_FLAG_GROUP uint32 = uint32(0x01) << 0
 )
 
 const (
@@ -44,7 +44,7 @@ const (
 	MAHJONG_MEI    int32 = 24
 	MAHJONG_LAN    int32 = 25
 	MAHJONG_ZHU    int32 = 26
-	MAHJONG_JU     int32 = 27	
+	MAHJONG_JU     int32 = 27
 
 	MAHJONG_ANY int32 = 50
 )
@@ -55,24 +55,23 @@ const (
 )
 
 const (
-	MJ_HU_TYPE_NONE         uint64 = 0
-	MJ_HU_TYPE_COMMON       uint64 = uint64(0x01) << 0
-	MJ_HU_TYPE_QIDUI        uint64 = uint64(0x01) << 1
+	MJ_HU_TYPE_NONE   uint64 = 0
+	MJ_HU_TYPE_COMMON uint64 = uint64(0x01) << 0
+	MJ_HU_TYPE_QIDUI  uint64 = uint64(0x01) << 1
 )
 
-
-const (	
+const (
 	ROBOT_LEVEL_AMATEUR int32 = 1 //业余: 按权重打，按胡杠碰吃优先级选择，与普通玩家水平相当
-	ROBOT_LEVEL_MAJOR   int32 = 2 //专业: 按向听数打，智能选择胡杠碰吃过，与麻将比赛选手水平相当	
+	ROBOT_LEVEL_MAJOR   int32 = 2 //专业: 按向听数打，智能选择胡杠碰吃过，与麻将比赛选手水平相当
 )
 
 //过胡杠碰吃
 const (
-	MJ_CHI_PASS        int32 = 0
-	MJ_CHI_HU          int32 = 1
-	MJ_CHI_GANG        int32 = 2
-	MJ_CHI_GANG_WAN    int32 = 3
-	MJ_CHI_GANG_AN     int32 = 4
-	MJ_CHI_PENG        int32 = 5
-	MJ_CHI_CHI         int32 = 6	
+	MJ_CHI_PASS     int32 = 0
+	MJ_CHI_HU       int32 = 1
+	MJ_CHI_GANG     int32 = 2
+	MJ_CHI_GANG_WAN int32 = 3
+	MJ_CHI_GANG_AN  int32 = 4
+	MJ_CHI_PENG     int32 = 5
+	MJ_CHI_CHI      int32 = 6
 )

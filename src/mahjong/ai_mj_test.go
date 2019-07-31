@@ -2,16 +2,16 @@ package mahjong
 
 import (
 	"fmt"
+	"os"
 	"sort"
 	"testing"
 	"time"
 	"util"
-	"os"
 )
 
 func TestBatchGetCardForRobot(t *testing.T) {
 	rule := NewRuleMahjong(RULE_HN_MAHJONG_HONGZHONG)
-	rule.SetLaiziCard([]int32{415})	
+	rule.SetLaiziCard([]int32{415})
 	ai := &AIMjBase{}
 	ai.SetRule(rule)
 	ai.SetLevel(ROBOT_LEVEL_MAJOR)
@@ -35,7 +35,7 @@ func TestBatchGetCardForRobot(t *testing.T) {
 
 func TestGetChiForRobot(t *testing.T) {
 	rule := NewRuleMahjong(RULE_HN_MAHJONG_HONGZHONG)
-	rule.SetLaiziCard([]int32{415})	
+	rule.SetLaiziCard([]int32{415})
 	ai := &AIMjBase{}
 	ai.SetRule(rule)
 	ai.SetLevel(ROBOT_LEVEL_MAJOR)
@@ -74,7 +74,7 @@ func createRandCards(num int32) []int32 {
 	cards := make([]int32, 0, num)
 	for {
 		//c := cc[util.GetRandom(0, int32(len(cc)-1))]
-		c := cc[util.GetRandom(18, 28)] 
+		c := cc[util.GetRandom(18, 28)]
 		if mc[c] >= 4 {
 			continue
 		}

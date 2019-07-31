@@ -2,7 +2,7 @@ package mahjong
 
 import (
 	"sort"
-	"util"		
+	"util"
 )
 
 type ChiCard struct {
@@ -10,7 +10,7 @@ type ChiCard struct {
 	CardType  int32
 	FromIndex int32
 	ToIndex   int32
-	ChiPosBit int32   //吃位置的二进制标示，位运算	
+	ChiPosBit int32 //吃位置的二进制标示，位运算
 }
 
 func NewChiCard() *ChiCard {
@@ -19,7 +19,7 @@ func NewChiCard() *ChiCard {
 		CardType:  0,
 		FromIndex: 0,
 		ToIndex:   0,
-		ChiPosBit: 0,		
+		ChiPosBit: 0,
 	}
 	return c
 }
@@ -45,7 +45,7 @@ type IMahjong interface {
 	//是否为癞子牌
 	IsLaiziCard(card int32) bool
 	//是否胡七对
-	IsHasQidui() bool	
+	IsHasQidui() bool
 	//获取吃牌数组
 	GetChiCard(chiCard *ChiCard) []int32
 	//获取胡牌类型及分组信息
@@ -57,8 +57,8 @@ type IMahjong interface {
 }
 
 type RuleMahjong struct {
-	rType	int32
-	lzCards	[]int32
+	rType   int32
+	lzCards []int32
 }
 
 func NewRuleMahjong(rType int32) *RuleMahjong {
@@ -99,7 +99,7 @@ func (rule *RuleMahjong) GetChiCard(chiCard *ChiCard) []int32 {
 	} else if chiCard.CardType == MJ_CHI_PENG {
 		cards = []int32{chiCard.CardId, chiCard.CardId, chiCard.CardId}
 	} else if chiCard.CardType == MJ_CHI_CHI {
-		c := chiCard.CardId		
+		c := chiCard.CardId
 		c1, c2, c3 := int32(0), int32(0), int32(0)
 		if chiCard.ChiPosBit&(0x01<<1) != 0 {
 			c1, c2, c3 = c-2, c-1, chiCard.CardId
@@ -107,7 +107,7 @@ func (rule *RuleMahjong) GetChiCard(chiCard *ChiCard) []int32 {
 			c1, c2, c3 = c-1, chiCard.CardId, c+1
 		} else if chiCard.ChiPosBit&(0x01<<3) != 0 {
 			c1, c2, c3 = chiCard.CardId, c+1, c+2
-		}		
+		}
 		cards = []int32{c1, c2, c3}
 	}
 	return cards
@@ -147,7 +147,7 @@ func (rule *RuleMahjong) CheckTing(chiCards []*ChiCard, holdCards []int32, all b
 		return tingInfo
 	}
 
-	tingInfo = append(tingInfo, CheckCommonTing(aiCards, lzNum, all)...)		
+	tingInfo = append(tingInfo, CheckCommonTing(aiCards, lzNum, all)...)
 	return tingInfo
 }
 
@@ -235,7 +235,7 @@ func (rule *RuleMahjong) doCheckNTing(chiCards []*ChiCard, cards []int32, N int3
 
 	if len(tings) > 1 {
 		sort.Slice(tings, func(i, j int) bool { return tings[i] < tings[j] })
-		tings = util.UniqueSlice(tings).([]int32)
+		tings = util.UniqueSlice(tings, true).([]int32)
 	}
 	return maxBaseN, tings
 }

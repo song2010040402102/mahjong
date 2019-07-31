@@ -1,6 +1,6 @@
 package mahjong
 
-import (		
+import (
 	"math"
 	"sort"
 	"util"
@@ -58,7 +58,8 @@ func ConvertSliceToAICard(holdCards []int32, card int32, lzCards []int32) ([]AIC
 
 //获取牌价值
 func GetCardValue(rule IMahjong, holdCards []int32, moCard int32) []CardValue {
-	aiCards, _ := ConvertSliceToAICard(holdCards, moCard, rule.GetLaiziCard())	
+	aiCards, _ := ConvertSliceToAICard(holdCards, moCard, rule.GetLaiziCard())
+	valCards := analyzeCardValue(aiCards)
 	lzCards := []int32{}
 	for _, v := range holdCards {
 		if rule.IsLaiziCard(v) {
@@ -68,13 +69,14 @@ func GetCardValue(rule IMahjong, holdCards []int32, moCard int32) []CardValue {
 	if rule.IsLaiziCard(moCard) {
 		lzCards = append(lzCards, moCard)
 	}
-	sort.Slice(lzCards, func(i, j int) bool { return lzCards[i] < lzCards[j] })
-	lzCards = util.UniqueSlice(lzCards).([]int32)
-	valCards := analyzeCardValue(aiCards, lzCards)	
+	lzCards = util.UniqueSlice(lzCards, false).([]int32)
+	for _, v := range lzCards {
+		valCards = append(valCards, CardValue{v, 1e9})
+	}
 	return valCards
 }
 
-func analyzeCardValue(aiCards []AICard, lzCards []int32) []CardValue {
+func analyzeCardValue(aiCards []AICard) []CardValue {
 	//对每张牌进行价值评估，由位置、距离、数量三个指标构成
 	valCards := make([]CardValue, len(aiCards))
 	for i := 0; i < len(aiCards); i++ {
@@ -104,9 +106,6 @@ func analyzeCardValue(aiCards []AICard, lzCards []int32) []CardValue {
 		valCards[i].Card = aiCards[i].Card
 		valCards[i].Val += val
 	}
-	for _, v := range lzCards {
-		valCards = append(valCards, CardValue{v, float32(1e9)})
-	}
 	sort.Slice(valCards, func(i, j int) bool { return valCards[i].Val <= valCards[j].Val })
 	return valCards
 }
@@ -117,7 +116,7 @@ func removeSolKeSeq(rule IMahjong, cards []int32) []int32 {
 		for i := 0; i < len(cards); i++ {
 			if rule.IsLaiziCard(cards[i]) == true {
 				cards[i] = MAHJONG_LZ
-			} 
+			}
 		}
 	}
 	sort.Slice(cards, func(i, j int) bool { return cards[i] < cards[j] })
@@ -139,7 +138,7 @@ func removeSolKeSeq(rule IMahjong, cards []int32) []int32 {
 		for i := 0; i < len(cards); i++ {
 			if cards[i] == MAHJONG_LZ {
 				cards[i] = lzCards[0]
-			} 
+			}
 		}
 	}
 	sort.Slice(cards, func(i, j int) bool { return cards[i] < cards[j] })
@@ -188,7 +187,7 @@ func (ai *AIMjBase) SetAllCard(holdCards map[int32][]int32, chiCards map[int32][
 }
 
 func (ai *AIMjBase) SetLevel(level int32) {
-	ai.level = level	
+	ai.level = level
 }
 
 func (ai *AIMjBase) GetCardForMandate(index int32, moCard int32, cards []int32) int32 {
@@ -210,7 +209,7 @@ func (ai *AIMjBase) GetCardForRobot(index int32, moCard int32, cards []int32) in
 		return ai.getCardForWeight(ai.holdCards[index], moCard, cards)
 	} else if ai.level == ROBOT_LEVEL_MAJOR {
 		return ai.getCardForTingNum(ai.holdCards[index], moCard, cards, index, ai.chiCards[index])
-	} 
+	}
 	return 0
 }
 
@@ -274,7 +273,7 @@ func (ai *AIMjBase) GetChiForRobot(index int32, moCard int32, chiCards []*ChiCar
 			playC := ai.getCardForTingNum(preCards, 0, preCards, index, ai.chiCards[index])
 			preCards = util.RemoveSliceElem(preCards, playC, false).([]int32)
 		}
-		preN, delN := ai.getMainCardTingNum(ai.chiCards[index], preCards, 0)		
+		preN, delN := ai.getMainCardTingNum(ai.chiCards[index], preCards, 0)
 
 		for _, v := range newChiCards {
 			curCards := make([]int32, len(ai.holdCards[index]))
@@ -322,10 +321,10 @@ func (ai *AIMjBase) GetChiForRobot(index int32, moCard int32, chiCards []*ChiCar
 					//杠不会进听，所以如果没有退听，可以优先杠，对于吃和碰，可能退换进听，对于换听，理想情况下应该考虑换听后的听牌总数，但意义不大会有损效率
 					preN = curN
 					*chiCard = *v
-				}				
+				}
 			}
 		}
-	} else {		
+	} else {
 		return nil
 	}
 	return chiCard
@@ -367,9 +366,9 @@ func (ai *AIMjBase) getCardForTingNum(holdCards []int32, moCard int32, allowCard
 			i--
 		}
 	}
-	if len(valCards) == 0 {		
+	if len(valCards) == 0 {
 		return 0
-	}	
+	}
 
 	//直接打出唯一牌
 	if len(valCards) == 1 {
@@ -427,7 +426,7 @@ func (ai *AIMjBase) getCardForTingNum(holdCards []int32, moCard int32, allowCard
 	}
 	if maxTingC == 0 {
 		maxTingC = valCards[0].Card
-	}	
+	}
 	return maxTingC
 }
 
@@ -439,7 +438,7 @@ func (ai *AIMjBase) getAloneGang(index int32, moCard int32, chiCards []*ChiCard)
 		copy(cards, ai.holdCards[index])
 		sort.Slice(cards, func(i, j int) bool { return cards[i] < cards[j] })
 		for _, v := range chiCards {
-			card := v.CardId			
+			card := v.CardId
 			if c := card % MAHJONG_MASK; c >= MAHJONG_DONG && c <= MAHJONG_BAI {
 				return v
 			}
@@ -498,8 +497,8 @@ func (ai *AIMjBase) getMainCardTingNum(chiCards []*ChiCard, holdCards []int32, d
 
 	realN, _ := ai.rule.CheckNTing(chiCards, cards, maxN, false)
 	if realN < 0 {
-		realN = int32(len(cards) * 2)		
-	}	
+		realN = int32(len(cards) * 2)
+	}
 	return realN, delN
 }
 

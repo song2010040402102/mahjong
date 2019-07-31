@@ -2,7 +2,7 @@ package mahjong
 
 import (
 	"sort"
-	"util"		
+	"util"
 )
 
 const (
@@ -50,6 +50,42 @@ func createHuGroup(treeCard *TreeCard) [][][3]int32 {
 		groups = append(groups, [][3]int32{treeCard.cards})
 	}
 	return groups
+}
+
+func uniqueHuGroup(groups [][][3]int32) [][][3]int32 {
+	type GroupInfo struct {
+		group [][3]int32
+		seq   []uint64
+	}
+	sGroupInfo := make([]*GroupInfo, 0, len(groups))
+	for _, group := range groups {
+		pGroupInfo := &GroupInfo{
+			group: group,
+			seq:   make([]uint64, len(group)-1),
+		}
+		for i := 0; i < len(group)-1; i++ {
+			pGroupInfo.seq[i] = uint64(group[i][0]) | (uint64(group[i][1]) << 20) | (uint64(group[i][2]) << 40)
+		}
+		sort.Slice(pGroupInfo.seq, func(i, j int) bool { return pGroupInfo.seq[i] < pGroupInfo.seq[j] })
+		sGroupInfo = append(sGroupInfo, pGroupInfo)
+	}
+	sGroupInfo = util.UniqueSlice2(sGroupInfo, func(i, j int) bool {
+		seq1, seq2 := sGroupInfo[i].seq, sGroupInfo[j].seq
+		if len(seq1) != len(seq2) {
+			return false
+		}
+		for k := 0; k < len(seq1); k++ {
+			if seq1[k] != seq2[k] {
+				return false
+			}
+		}
+		return true
+	}, false).([]*GroupInfo)
+	ret := make([][][3]int32, 0, len(sGroupInfo))
+	for _, v := range sGroupInfo {
+		ret = append(ret, v.group)
+	}
+	return ret
 }
 
 func analyzeCommonHu(aiCards []AICard, lzNum int32, all bool, treeCard *TreeCard, index int) bool {
@@ -221,7 +257,7 @@ func CheckCommonHu(cards []AICard, lzNum int32, all bool) (bool, [][][3]int32) {
 		if analyzeCommonHu(aiCards, lzNum, all, treeCard, 0) {
 			bHu = true
 			if all {
-				groups = append(groups, createHuGroup(treeCard)...)
+				groups = append(groups, uniqueHuGroup(createHuGroup(treeCard))...)
 			} else {
 				break
 			}
@@ -295,8 +331,8 @@ func CheckCommonTing(cards []AICard, lzNum int32, all bool) []int32 {
 	}
 
 	if len(tingInfo) > 0 {
-		sort.Slice(tingInfo, func(i, index int) bool { return tingInfo[i] < tingInfo[index] })
-		tingInfo = util.UniqueSlice(tingInfo).([]int32)
+		sort.Slice(tingInfo, func(i, j int) bool { return tingInfo[i] < tingInfo[j] })
+		tingInfo = util.UniqueSlice(tingInfo, true).([]int32)
 	}
 	return tingInfo
 }
