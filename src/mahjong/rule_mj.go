@@ -2,7 +2,7 @@ package mahjong
 
 import (
 	"sort"
-	"util"
+	"util"	
 )
 
 type ChiCard struct {
@@ -180,11 +180,11 @@ func (rule *RuleMahjong) CheckNTing(chiCards []*ChiCard, holdCards []int32, N in
 	}
 	sort.Slice(indexs, func(i, j int) bool { return mapVal[cards[indexs[i]]] < mapVal[cards[indexs[j]]] })
 
-	baseN, tings := rule.doCheckNTing(chiCards, cards, N, indexs, 0, all)
+	baseN, tings := rule.doCheckNTing(chiCards, cards, N, indexs, 0, all)	
 	if len(tings) == 0 {
 		return -1, tings
 	}
-	return N - baseN, tings
+	return N - baseN, tings	
 }
 
 func (rule *RuleMahjong) doCheckNTing(chiCards []*ChiCard, cards []int32, N int32, indexs []int, minIndex int, all bool) (int32, []int32) {
@@ -238,4 +238,84 @@ func (rule *RuleMahjong) doCheckNTing(chiCards []*ChiCard, cards []int32, N int3
 		tings = util.UniqueSlice(tings, true).([]int32)
 	}
 	return maxBaseN, tings
+}
+
+/** CheckNTing2和CheckNTing的返回结果一致，只是两者的遍历方式不同，CheckNTing采用递归深度优先遍历，CheckNTing2采用循环广度优先遍历
+ ** 理论上对于实际向听数小于输入向听数，广度优先遍历效率会远高于深度优先遍历，由于CheckNTing采用预排序和剪枝，所以实际效率两者相差不大
+**/
+func (rule *RuleMahjong) CheckNTing2(chiCards []*ChiCard, holdCards []int32, N int32, all bool) (int32, []int32) {
+	if len(holdCards)%3 != 1 || N < 0 {
+		return -1, []int32{}
+	}
+
+	tings := rule.CheckTing(chiCards, holdCards, all)
+	if len(tings) > 0 {
+		return 0, tings
+	} else if N == 0 {
+		return -1, []int32{}
+	}
+
+	cards := make([]int32, len(holdCards))
+	copy(cards, holdCards)
+	sort.Slice(cards, func(i, j int) bool { return cards[i] < cards[j] })
+
+	indexs := make([]int, 0, len(cards))
+	for i := 0; i < len(cards); i++ {
+		if rule.IsLaiziCard(cards[i]) || i > 0 && cards[i] == cards[i-1] {
+			continue
+		}
+		indexs = append(indexs, i)
+	}
+	
+	for i := int32(1); i <= N; i++ {
+		if tings := rule.doCheckNTing2(chiCards, cards, i, indexs, all); len(tings) > 0 {
+			return i, tings
+		}
+	}
+	return -1, []int32{}
+}
+
+func (rule *RuleMahjong) doCheckNTing2(chiCards []*ChiCard, cards []int32, N int32, indexs []int, all bool) []int32 {
+	group := make([]int, N)
+	for i := 0; i < int(N); i++ {
+		group[i] = i
+	}
+	sumTings := []int32{}
+	tmpCards := make([]int32, len(cards))
+	for {		
+		copy(tmpCards, cards)
+		for  i := 0; i < int(N); i++ {
+			tmpCards[indexs[group[i]]] = rule.lzCards[0]			
+		}
+		if tings := rule.CheckTing(chiCards, tmpCards, all); len(tings) > 0 {
+			sumTings = append(sumTings, tings...)
+		}		
+		if !rule.nextGroup(group, len(indexs)) {
+			break
+		}		
+	}
+	if len(sumTings) > 1 {
+		sort.Slice(sumTings, func(i, j int) bool { return sumTings[i] < sumTings[j] })
+		sumTings = util.UniqueSlice(sumTings, true).([]int32)
+	}
+	return sumTings	
+}
+
+func (rule *RuleMahjong) nextGroup(group []int, length int) bool {
+	if len(group) == 0 || len(group) > length {
+		return false
+	}
+	if group[0] == length-len(group) {
+		return false
+	}
+	for i := len(group)-1; i >= 0 ; i-- {
+		if group[i] < length-len(group)+i {
+			group[i]++
+			for j := i+1; j < len(group); j++ {
+				group[j] = group[j-1]+1
+			}
+			break
+		}
+	}
+	return true
 }
