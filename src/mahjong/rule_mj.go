@@ -2,7 +2,7 @@ package mahjong
 
 import (
 	"sort"
-	"util"	
+	"util"
 )
 
 type ChiCard struct {
@@ -162,6 +162,9 @@ func (rule *RuleMahjong) CheckNTing(chiCards []*ChiCard, holdCards []int32, N in
 
 	cards := make([]int32, len(holdCards))
 	copy(cards, holdCards)
+	if len(cards) > 3 {
+		cards = rule.removeSolKeSeq(cards)
+	}
 	sort.Slice(cards, func(i, j int) bool { return cards[i] < cards[j] })
 
 	indexs := make([]int, 0, len(cards))
@@ -172,7 +175,7 @@ func (rule *RuleMahjong) CheckNTing(chiCards []*ChiCard, holdCards []int32, N in
 		indexs = append(indexs, i)
 	}
 
-	//对indexs按权重预排序会提高剪枝效率，能加快搜索树的返回，对于实际听数小于检测听数的剪枝效率很高，其它情况效率差不多
+	//对indexs按权重预排序会提高剪枝效率，能加快搜索树的返回，对于实际听数小于检测听数的剪枝效率很高，其它情况效率一样
 	cardVal := GetCardValue(rule, cards, 0)
 	mapVal := make(map[int32]float32)
 	for _, v := range cardVal {
@@ -180,11 +183,11 @@ func (rule *RuleMahjong) CheckNTing(chiCards []*ChiCard, holdCards []int32, N in
 	}
 	sort.Slice(indexs, func(i, j int) bool { return mapVal[cards[indexs[i]]] < mapVal[cards[indexs[j]]] })
 
-	baseN, tings := rule.doCheckNTing(chiCards, cards, N, indexs, 0, all)	
+	baseN, tings := rule.doCheckNTing(chiCards, cards, N, indexs, 0, all)
 	if len(tings) == 0 {
 		return -1, tings
 	}
-	return N - baseN, tings	
+	return N - baseN, tings
 }
 
 func (rule *RuleMahjong) doCheckNTing(chiCards []*ChiCard, cards []int32, N int32, indexs []int, minIndex int, all bool) (int32, []int32) {
@@ -242,6 +245,7 @@ func (rule *RuleMahjong) doCheckNTing(chiCards []*ChiCard, cards []int32, N int3
 
 /** CheckNTing2和CheckNTing的返回结果一致，只是两者的遍历方式不同，CheckNTing采用递归深度优先遍历，CheckNTing2采用循环广度优先遍历
  ** 理论上对于实际向听数小于输入向听数，广度优先遍历效率会远高于深度优先遍历，由于CheckNTing采用预排序和剪枝，所以实际效率两者相差不大
+ ** 由于存在拆对子的情况，若忽略此情况，有些极端牌型会导致错误结果，而采用广度优先遍历对于打出一对牌检查听牌难以实现，因此采用CheckNTing
 **/
 func (rule *RuleMahjong) CheckNTing2(chiCards []*ChiCard, holdCards []int32, N int32, all bool) (int32, []int32) {
 	if len(holdCards)%3 != 1 || N < 0 {
@@ -266,7 +270,7 @@ func (rule *RuleMahjong) CheckNTing2(chiCards []*ChiCard, holdCards []int32, N i
 		}
 		indexs = append(indexs, i)
 	}
-	
+
 	for i := int32(1); i <= N; i++ {
 		if tings := rule.doCheckNTing2(chiCards, cards, i, indexs, all); len(tings) > 0 {
 			return i, tings
@@ -282,23 +286,23 @@ func (rule *RuleMahjong) doCheckNTing2(chiCards []*ChiCard, cards []int32, N int
 	}
 	sumTings := []int32{}
 	tmpCards := make([]int32, len(cards))
-	for {		
+	for {
 		copy(tmpCards, cards)
-		for  i := 0; i < int(N); i++ {
-			tmpCards[indexs[group[i]]] = rule.lzCards[0]			
+		for i := 0; i < int(N); i++ {
+			tmpCards[indexs[group[i]]] = rule.lzCards[0]
 		}
 		if tings := rule.CheckTing(chiCards, tmpCards, all); len(tings) > 0 {
 			sumTings = append(sumTings, tings...)
-		}		
+		}
 		if !rule.nextGroup(group, len(indexs)) {
 			break
-		}		
+		}
 	}
 	if len(sumTings) > 1 {
 		sort.Slice(sumTings, func(i, j int) bool { return sumTings[i] < sumTings[j] })
 		sumTings = util.UniqueSlice(sumTings, true).([]int32)
 	}
-	return sumTings	
+	return sumTings
 }
 
 func (rule *RuleMahjong) nextGroup(group []int, length int) bool {
@@ -308,14 +312,38 @@ func (rule *RuleMahjong) nextGroup(group []int, length int) bool {
 	if group[0] == length-len(group) {
 		return false
 	}
-	for i := len(group)-1; i >= 0 ; i-- {
+	for i := len(group) - 1; i >= 0; i-- {
 		if group[i] < length-len(group)+i {
 			group[i]++
-			for j := i+1; j < len(group); j++ {
-				group[j] = group[j-1]+1
+			for j := i + 1; j < len(group); j++ {
+				group[j] = group[j-1] + 1
 			}
 			break
 		}
 	}
 	return true
+}
+
+func (rule *RuleMahjong) removeSolKeSeq(cards []int32) []int32 {
+	lzCards := []int32{}
+	for i := 0; i < len(cards); {
+		if rule.IsLaiziCard(cards[i]) {
+			lzCards = append(lzCards, cards[i])
+			cards = append(cards[:i], cards[i+1:]...)
+		} else {
+			i++
+		}
+	}
+	sort.Slice(cards, func(i, j int) bool { return cards[i] < cards[j] })
+	for i := 0; i < len(cards)-2; {
+		sol := (i == 0 || cards[i-1] < cards[i]-2) && (i == len(cards)-3 || cards[i+3] > cards[i+2]+2)
+		if cards[i] == cards[i+1] && cards[i+1] == cards[i+2] && (cards[i]%MAHJONG_MASK >= MAHJONG_DONG || sol) {
+			cards = append(cards[:i], cards[i+3:]...) //移除独立的刻子
+		} else if c := cards[i] % MAHJONG_MASK; c >= MAHJONG_1 && c <= MAHJONG_7 && cards[i] == cards[i+1]-1 && cards[i+1] == cards[i+2]-1 && sol {
+			cards = append(cards[:i], cards[i+3:]...) //移除独立的顺子
+		} else {
+			i++
+		}
+	}
+	return append(cards, lzCards...)
 }

@@ -110,41 +110,6 @@ func analyzeCardValue(aiCards []AICard) []CardValue {
 	return valCards
 }
 
-func removeSolKeSeq(rule IMahjong, cards []int32) []int32 {
-	lzCards := rule.GetLaiziCard()
-	if len(lzCards) > 0 {
-		for i := 0; i < len(cards); i++ {
-			if rule.IsLaiziCard(cards[i]) == true {
-				cards[i] = MAHJONG_LZ
-			}
-		}
-	}
-	sort.Slice(cards, func(i, j int) bool { return cards[i] < cards[j] })
-	for i := 0; i < len(cards)-2; {
-		if cards[i] == MAHJONG_LZ || cards[i+1] == MAHJONG_LZ || cards[i+2] == MAHJONG_LZ {
-			i++
-			continue
-		}
-		sol := (i == 0 || cards[i-1] == MAHJONG_LZ || cards[i-1] < cards[i]-2) && (i == len(cards)-3 || cards[i+3] == MAHJONG_LZ || cards[i+3] > cards[i+2]+2)
-		if cards[i] == cards[i+1] && cards[i+1] == cards[i+2] && (cards[i]%MAHJONG_MASK >= MAHJONG_DONG || sol) {
-			cards = append(cards[:i], cards[i+3:]...) //移除独立的刻子
-		} else if c := cards[i] % MAHJONG_MASK; c >= MAHJONG_1 && c <= MAHJONG_7 && cards[i] == cards[i+1]-1 && cards[i+1] == cards[i+2]-1 && sol {
-			cards = append(cards[:i], cards[i+3:]...) //移除独立的顺子
-		} else {
-			i++
-		}
-	}
-	if len(lzCards) > 0 {
-		for i := 0; i < len(cards); i++ {
-			if cards[i] == MAHJONG_LZ {
-				cards[i] = lzCards[0]
-			}
-		}
-	}
-	sort.Slice(cards, func(i, j int) bool { return cards[i] < cards[j] })
-	return cards
-}
-
 type IAIMj interface {
 	//设置规则
 	SetRule(rule IMahjong)
@@ -483,10 +448,6 @@ func (ai *AIMjBase) getMainCardTingNum(chiCards []*ChiCard, holdCards []int32, d
 		for i := int32(0); i < delN; i++ {
 			cards = util.RemoveSliceElem(cards, valCards[i].Card, false).([]int32)
 		}
-	}
-
-	if len(cards) > 3 {
-		cards = removeSolKeSeq(ai.rule, cards)
 	}
 
 	//尝试的最大向听数，不减去癞子牌数量，因为会存在单牌

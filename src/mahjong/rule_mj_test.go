@@ -39,7 +39,7 @@ func TestCheckTwoTing(t *testing.T) {
 func TestCheckThreeTing(t *testing.T) {
 	r := NewRuleMahjong(RULE_HN_MAHJONG_HONGZHONG)
 	r.SetLaiziCard([]int32{415})
-	holdCards := []int32{101, 101, 201, 203, 204, 206, 206, 207, 209, 304, 305, 307, 308}
+	holdCards := []int32{101, 101, 201, 203, 204, 206, 206, 207, 209, 304, 305, 307, 308, 105, 106, 107}
 	realN, tings := r.CheckNTing([]*ChiCard{}, holdCards, 3, true)
 	fmt.Println("TestCheckThreeTing, ", realN, tings)
 }
